@@ -1523,7 +1523,7 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
             <summary class="font-medium cursor-pointer">cURL Command</summary>
             <div class="mt-2 relative">
               <pre id="curlCommand" class="p-3 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto">${generateCurl(t)}</pre>
-              <button onclick="copyCurl()" class="absolute top-2 right-2 px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded">
+              <button onclick="copyCurl(this)" class="absolute top-2 right-2 px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded">
                 Copy
               </button>
             </div>
@@ -1570,11 +1570,10 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       return curl;
     }
 
-    function copyCurl() {
+    function copyCurl(btn) {
       const curlText = document.getElementById('curlCommand').textContent;
       navigator.clipboard.writeText(curlText).then(() => {
         // Show feedback
-        const btn = event.target;
         const originalText = btn.textContent;
         btn.textContent = 'Copied!';
         btn.classList.add('bg-green-600');
