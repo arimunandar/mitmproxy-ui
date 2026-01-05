@@ -87,6 +87,13 @@ if [ -n "$MITM_PIDS" ]; then
     echo -e "${GREEN}✓ Orphaned processes cleaned${NC}"
 fi
 
+# Disable Mac proxy by default (safety measure)
+echo ""
+echo "Disabling Mac proxy settings..."
+networksetup -setwebproxystate "Wi-Fi" off 2>/dev/null || true
+networksetup -setsecurewebproxystate "Wi-Fi" off 2>/dev/null || true
+echo -e "${GREEN}✓ Mac proxy disabled${NC}"
+
 echo ""
 echo -e "${GREEN}========================================"
 echo "   Setup Complete!"
@@ -110,7 +117,23 @@ IP_ADDRESS=$(ipconfig getifaddr en0 2>/dev/null || echo "Not found")
 echo -e "  ${GREEN}$IP_ADDRESS${NC}"
 echo ""
 echo -e "${YELLOW}Starting server...${NC}"
-echo ""
 
-# Start the server
-npm start
+# Start the server in background (suppress output)
+npm start > /dev/null 2>&1 &
+SERVER_PID=$!
+
+# Wait a moment for server to start
+sleep 2
+
+# Check if server is running
+if lsof -ti:3000 > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ Server is running (PID: $SERVER_PID)${NC}"
+    echo ""
+    echo -e "  Dashboard: ${GREEN}http://localhost:3000${NC}"
+    echo ""
+    echo -e "To stop the server, run: ${YELLOW}kill $SERVER_PID${NC}"
+else
+    echo -e "${RED}✗ Server failed to start${NC}"
+    echo "  Check logs with: npm start"
+fi
+echo ""
