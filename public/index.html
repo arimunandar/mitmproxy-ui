@@ -236,6 +236,10 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
           <div class="flex items-center gap-4">
             <h2 class="font-semibold">Live Traffic</h2>
             <span id="trafficCount" class="text-sm text-gray-500">0 requests</span>
+            <button id="trafficPauseBtn" onclick="toggleTrafficPause()" class="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 text-sm rounded hover:bg-green-200">
+              <span id="trafficPauseIcon">⏸</span>
+              <span id="trafficPauseText">Pause</span>
+            </button>
           </div>
           <div class="flex gap-2">
             <input type="text" id="trafficFilter" placeholder="Filter by URL..." class="px-3 py-1.5 border rounded text-sm w-64" oninput="filterTraffic()">
@@ -1139,6 +1143,7 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
     let proxyRunning = false;
     let isRecording = false;
     let trafficData = [];
+    let trafficPaused = false;
     let rulesData = [];
     let selectedTraffic = null;
     let ws = null;
@@ -1427,7 +1432,29 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
     function addTrafficItem(item) {
       trafficData.push(item);
       if (trafficData.length > 500) trafficData.shift();
-      renderTraffic();
+      if (!trafficPaused) {
+        renderTraffic();
+      }
+    }
+
+    function toggleTrafficPause() {
+      trafficPaused = !trafficPaused;
+      const btn = document.getElementById('trafficPauseBtn');
+      const icon = document.getElementById('trafficPauseIcon');
+      const text = document.getElementById('trafficPauseText');
+
+      if (trafficPaused) {
+        btn.classList.remove('bg-green-100', 'text-green-700', 'hover:bg-green-200');
+        btn.classList.add('bg-yellow-100', 'text-yellow-700', 'hover:bg-yellow-200');
+        icon.textContent = '▶';
+        text.textContent = 'Resume';
+      } else {
+        btn.classList.remove('bg-yellow-100', 'text-yellow-700', 'hover:bg-yellow-200');
+        btn.classList.add('bg-green-100', 'text-green-700', 'hover:bg-green-200');
+        icon.textContent = '⏸';
+        text.textContent = 'Pause';
+        renderTraffic(); // Refresh to show any items added while paused
+      }
     }
 
     function renderTraffic() {
