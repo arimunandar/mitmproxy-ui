@@ -57,6 +57,37 @@ echo "Installing npm dependencies..."
 npm install
 
 echo ""
+echo "Checking for port conflicts..."
+
+# Kill any process using port 3000 (Dashboard)
+PORT_3000_PID=$(lsof -ti:3000 2>/dev/null || true)
+if [ -n "$PORT_3000_PID" ]; then
+    echo -e "${YELLOW}Port 3000 in use. Killing process...${NC}"
+    kill -9 $PORT_3000_PID 2>/dev/null || true
+    echo -e "${GREEN}✓ Port 3000 freed${NC}"
+else
+    echo -e "${GREEN}✓ Port 3000 available${NC}"
+fi
+
+# Kill any process using port 8888 (Proxy)
+PORT_8888_PID=$(lsof -ti:8888 2>/dev/null || true)
+if [ -n "$PORT_8888_PID" ]; then
+    echo -e "${YELLOW}Port 8888 in use. Killing process...${NC}"
+    kill -9 $PORT_8888_PID 2>/dev/null || true
+    echo -e "${GREEN}✓ Port 8888 freed${NC}"
+else
+    echo -e "${GREEN}✓ Port 8888 available${NC}"
+fi
+
+# Kill any orphaned mitmproxy processes
+MITM_PIDS=$(pgrep -f "mitmdump.*mitm-addon" 2>/dev/null || true)
+if [ -n "$MITM_PIDS" ]; then
+    echo -e "${YELLOW}Found orphaned mitmproxy processes. Killing...${NC}"
+    pkill -f "mitmdump.*mitm-addon" 2>/dev/null || true
+    echo -e "${GREEN}✓ Orphaned processes cleaned${NC}"
+fi
+
+echo ""
 echo -e "${GREEN}========================================"
 echo "   Setup Complete!"
 echo "========================================${NC}"

@@ -13,12 +13,22 @@ A web-based dashboard to manage mitmproxy for iOS app API mocking. Intercept, vi
 ## Requirements
 
 - macOS
-- Node.js 18+ ([Download](https://nodejs.org/))
-- mitmproxy ([Install](https://mitmproxy.org/))
 
-## Quick Setup (5 minutes)
+## Quick Setup
 
-### Step 1: Install Dependencies
+### Option 1: Auto Setup (Recommended)
+
+```bash
+./setup.sh
+```
+
+This script will automatically:
+- Install Homebrew (if needed)
+- Install Node.js (if needed)
+- Install mitmproxy (if needed)
+- Install npm dependencies
+
+### Option 2: Manual Setup
 
 ```bash
 # Install mitmproxy (if not installed)
@@ -28,7 +38,7 @@ brew install mitmproxy
 npm install
 ```
 
-### Step 2: Start the Server
+### Start the Server
 
 ```bash
 npm start
@@ -36,21 +46,23 @@ npm start
 
 Open http://localhost:3000 in your browser.
 
-### Step 3: Start the Proxy
+### Start the Proxy
 
 1. Click **"Start Proxy"** button in the header
 2. The proxy will start on port 8888
 
-### Step 4: Install Certificate (First Time Only)
+### Install Certificate (First Time Only)
 
 For HTTPS interception, you need to install the mitmproxy certificate.
 
 #### For Mac Browser:
-1. Open Finder → Go → Go to Folder → `~/.mitmproxy/`
-2. Double-click `mitmproxy-ca-cert.pem`
-3. In Keychain Access, select "System" keychain
-4. Find "mitmproxy", double-click → Trust → "Always Trust"
-5. Restart your browser
+1. Open **Keychain Access** app
+2. Go to **File** → **Import Items...**
+3. Navigate to `~/.mitmproxy/` and select `mitmproxy-ca-cert.pem`
+4. Set Destination Keychain to **"System"** and import
+5. Find "mitmproxy" in System keychain, double-click it
+6. Expand **Trust** → Set to **"Always Trust"**
+7. Restart your browser
 
 #### For Real iPhone:
 1. Connect iPhone to **same WiFi** as your Mac
