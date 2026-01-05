@@ -1434,9 +1434,10 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       const container = document.getElementById('trafficList');
       const filter = document.getElementById('trafficFilter').value.toLowerCase();
 
-      const filtered = trafficData.filter(t =>
-        !filter || t.url.toLowerCase().includes(filter)
-      );
+      // Store filtered items with their original indices
+      const filtered = trafficData
+        .map((t, originalIndex) => ({ ...t, _originalIndex: originalIndex }))
+        .filter(t => !filter || t.url.toLowerCase().includes(filter));
 
       document.getElementById('trafficCount').textContent = `${filtered.length} requests`;
 
@@ -1452,7 +1453,7 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
         const methodClass = `method-${t.method.toLowerCase()}`;
 
         return `
-          <div class="traffic-item p-3 cursor-pointer flex items-center gap-4" onclick="showTrafficDetail(${filtered.length - 1 - i})">
+          <div class="traffic-item p-3 cursor-pointer flex items-center gap-4" onclick="showTrafficDetail(${t._originalIndex})">
             <span class="font-mono text-sm font-bold w-16 ${methodClass}">${t.method}</span>
             <span class="font-mono text-sm ${statusClass} w-12">${t.response?.status || '-'}</span>
             <span class="flex-1 text-sm truncate ${t.mocked ? 'text-purple-600' : ''}">${t.url}</span>
@@ -1517,6 +1518,16 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
             <summary class="font-medium cursor-pointer">Response Body</summary>
             <pre class="mt-2 p-3 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto max-h-96 overflow-y-auto">${formatBody(t.response?.body)}</pre>
           </details>
+
+          <details>
+            <summary class="font-medium cursor-pointer">cURL Command</summary>
+            <div class="mt-2 relative">
+              <pre id="curlCommand" class="p-3 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto">${generateCurl(t)}</pre>
+              <button onclick="copyCurl()" class="absolute top-2 right-2 px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded">
+                Copy
+              </button>
+            </div>
+          </details>
         </div>
       `;
 
@@ -1536,6 +1547,44 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       } catch {
         return body;
       }
+    }
+
+    function generateCurl(t) {
+      let curl = `curl -X ${t.method} '${t.url}'`;
+
+      // Add headers
+      if (t.requestHeaders) {
+        for (const [key, value] of Object.entries(t.requestHeaders)) {
+          // Skip some headers that curl handles automatically
+          if (['host', 'content-length', 'connection'].includes(key.toLowerCase())) continue;
+          curl += ` \\\n  -H '${key}: ${value.replace(/'/g, "'\\''")}'`;
+        }
+      }
+
+      // Add body for POST/PUT/PATCH
+      if (t.requestBody && ['POST', 'PUT', 'PATCH'].includes(t.method)) {
+        const escapedBody = t.requestBody.replace(/'/g, "'\\''");
+        curl += ` \\\n  -d '${escapedBody}'`;
+      }
+
+      return curl;
+    }
+
+    function copyCurl() {
+      const curlText = document.getElementById('curlCommand').textContent;
+      navigator.clipboard.writeText(curlText).then(() => {
+        // Show feedback
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.classList.add('bg-green-600');
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.classList.remove('bg-green-600');
+        }, 1500);
+      }).catch(err => {
+        alert('Failed to copy: ' + err.message);
+      });
     }
 
     // Rules
