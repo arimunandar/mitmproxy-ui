@@ -873,18 +873,81 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
                 </div>
               </div>
 
-              <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
-                <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">3</div>
+              <div class="flex gap-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div class="w-8 h-8 bg-yellow-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">3</div>
                 <div class="flex-1">
                   <h4 class="font-semibold text-gray-800">Install Certificate (First Time Only)</h4>
-                  <p class="text-sm text-gray-600 mt-1">For HTTPS sites, you need to install the mitmproxy certificate:</p>
-                  <ol class="text-sm text-gray-600 mt-2 space-y-1 list-decimal list-inside">
-                    <li>Open Finder → Go → Go to Folder → <code class="bg-gray-200 px-1 rounded">~/.mitmproxy/</code></li>
-                    <li>Double-click <strong>mitmproxy-ca-cert.pem</strong></li>
-                    <li>In Keychain Access, select <strong>"System"</strong> keychain</li>
-                    <li>Find "mitmproxy", double-click it</li>
-                    <li>Expand "Trust" → set to <strong>"Always Trust"</strong></li>
-                  </ol>
+                  <p class="text-sm text-gray-600 mt-1">For HTTPS sites, you need to install and trust the mitmproxy certificate:</p>
+
+                  <div class="mt-3 space-y-3">
+                    <!-- Step 3.1: Open folder -->
+                    <div class="flex items-start gap-2 text-sm">
+                      <span class="font-mono bg-yellow-200 px-1.5 py-0.5 rounded text-xs font-bold">3.1</span>
+                      <div>
+                        <p>Open Finder → <strong>Go</strong> menu → <strong>Go to Folder...</strong></p>
+                        <p class="text-gray-500 mt-1">Or press <code class="bg-gray-200 px-1 rounded">⌘ + Shift + G</code></p>
+                      </div>
+                    </div>
+
+                    <!-- Step 3.2: Enter path -->
+                    <div class="flex items-start gap-2 text-sm">
+                      <span class="font-mono bg-yellow-200 px-1.5 py-0.5 rounded text-xs font-bold">3.2</span>
+                      <div>
+                        <p>Type <code class="bg-gray-200 px-1.5 py-0.5 rounded font-mono">~/.mitmproxy/</code> and press Enter</p>
+                      </div>
+                    </div>
+
+                    <!-- Step 3.3: Double-click cert -->
+                    <div class="flex items-start gap-2 text-sm">
+                      <span class="font-mono bg-yellow-200 px-1.5 py-0.5 rounded text-xs font-bold">3.3</span>
+                      <div>
+                        <p>Double-click <strong>mitmproxy-ca-cert.pem</strong></p>
+                        <p class="text-gray-500 mt-1">This opens Keychain Access</p>
+                      </div>
+                    </div>
+
+                    <!-- Step 3.4: Import to keychain -->
+                    <div class="flex items-start gap-2 text-sm">
+                      <span class="font-mono bg-yellow-200 px-1.5 py-0.5 rounded text-xs font-bold">3.4</span>
+                      <div>
+                        <p>In Keychain Access, go to <strong>File</strong> menu → <strong>Import Items...</strong></p>
+                        <p class="mt-1">Select the <strong>mitmproxy-ca-cert.pem</strong> file</p>
+                        <p class="mt-1">Set Destination Keychain to <strong>"System"</strong></p>
+                        <p class="text-gray-500 mt-1">Enter your Mac password if prompted</p>
+                      </div>
+                    </div>
+
+                    <!-- Step 3.5: Find certificate -->
+                    <div class="flex items-start gap-2 text-sm">
+                      <span class="font-mono bg-yellow-200 px-1.5 py-0.5 rounded text-xs font-bold">3.5</span>
+                      <div>
+                        <p>In Keychain Access, click <strong>"System"</strong> in the sidebar</p>
+                        <p class="mt-1">Find <strong>"mitmproxy"</strong> in the list (use search if needed)</p>
+                      </div>
+                    </div>
+
+                    <!-- Step 3.6: Open certificate -->
+                    <div class="flex items-start gap-2 text-sm">
+                      <span class="font-mono bg-yellow-200 px-1.5 py-0.5 rounded text-xs font-bold">3.6</span>
+                      <div>
+                        <p><strong>Double-click</strong> on "mitmproxy" to open certificate info</p>
+                      </div>
+                    </div>
+
+                    <!-- Step 3.7: Trust certificate -->
+                    <div class="flex items-start gap-2 text-sm bg-green-50 p-2 rounded">
+                      <span class="font-mono bg-green-500 text-white px-1.5 py-0.5 rounded text-xs font-bold">3.7</span>
+                      <div>
+                        <p>Click the <strong>▶ Trust</strong> arrow to expand</p>
+                        <p class="mt-1">Set <strong>"When using this certificate"</strong> to <strong class="text-green-700">"Always Trust"</strong></p>
+                        <p class="text-gray-500 mt-1">Close the window and enter your password to confirm</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="mt-3 p-2 bg-blue-50 rounded text-sm text-blue-700">
+                    <strong>💡 Tip:</strong> The certificate icon should show a blue "+" after trusting, indicating it's trusted.
+                  </div>
                 </div>
               </div>
 
