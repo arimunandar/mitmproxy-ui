@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mitmproxy UI - iOS Simulator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .status-running { background-color: #22c55e; animation: pulse 2s infinite; }
+    .status-stopped { background-color: #ef4444; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .traffic-item:hover { background-color: #f3f4f6; }
+    .method-get { color: #22c55e; }
+    .method-post { color: #3b82f6; }
+    .method-put { color: #f59e0b; }
+    .method-delete { color: #ef4444; }
+    .status-2xx { color: #22c55e; }
+    .status-3xx { color: #3b82f6; }
+    .status-4xx { color: #f59e0b; }
+    .status-5xx { color: #ef4444; }
+    pre { white-space: pre-wrap; word-wrap: break-word; }
+    .setup-step { transition: all 0.3s; }
+    .setup-step.completed { opacity: 0.6; }
+    .setup-step.completed .step-number { background-color: #22c55e; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <h1 class="text-xl font-bold text-gray-800">mitmproxy UI</h1>
+          <span class="text-sm text-gray-500">iOS Simulator API Mocking</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <div id="proxyStatus" class="status-dot status-stopped"></div>
+            <span id="proxyStatusText" class="text-sm text-gray-600">Proxy Stopped</span>
+          </div>
+          <button id="toggleProxy" onclick="toggleProxy()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
+            Start Proxy
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="max-w-7xl mx-auto px-4 mt-4">
+    <div class="flex gap-1 border-b">
+      <button onclick="switchTab('setup')" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-blue-500 text-blue-600" data-tab="setup">
+        Setup Guide
+      </button>
+      <button onclick="switchTab('traffic')" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="traffic">
+        Live Traffic
+      </button>
+      <button onclick="switchTab('rules')" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="rules">
+        Mock Rules
+      </button>
+      <button onclick="switchTab('simulators')" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="simulators">
+        Simulators
+      </button>
+      <button onclick="switchTab('recordings')" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="recordings">
+        Recordings
+      </button>
+      <button onclick="switchTab('tutorial')" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="tutorial">
+        Tutorial
+      </button>
+    </div>
+  </div>
+
+  <!-- Tab Contents -->
+  <main class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- Setup Guide Tab -->
+    <div id="tab-setup" class="tab-content active">
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold mb-4">iOS Simulator Setup Guide</h2>
+        <p class="text-gray-600 mb-6">Follow these steps to configure mitmproxy with your iOS Simulator:</p>
+
+        <div class="space-y-4">
+          <!-- Step 1 -->
+          <div class="setup-step p-4 bg-gray-50 rounded-lg border" id="step-1">
+            <div class="flex items-start gap-4">
+              <div class="step-number w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">1</div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-gray-800">Start the Proxy</h3>
+                <p class="text-gray-600 text-sm mt-1">Click the "Start Proxy" button in the header to launch mitmproxy on port 8080.</p>
+                <div class="mt-3">
+                  <button onclick="toggleProxy(); markStepComplete(1);" class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">
+                    Start Proxy
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div class="setup-step p-4 bg-gray-50 rounded-lg border" id="step-2">
+            <div class="flex items-start gap-4">
+              <div class="step-number w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">2</div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-gray-800">Enable Mac Proxy Settings</h3>
+                <p class="text-gray-600 text-sm mt-1">iOS Simulator uses your Mac's network. Enable the proxy on your Mac:</p>
+                <div class="mt-3 flex gap-2">
+                  <button onclick="enableMacProxy(); markStepComplete(2);" class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">
+                    Enable Mac Proxy
+                  </button>
+                  <button onclick="disableMacProxy();" class="px-3 py-1.5 bg-gray-200 text-gray-700 text-sm rounded hover:bg-gray-300">
+                    Disable Mac Proxy
+                  </button>
+                </div>
+                <div class="mt-2 text-xs text-gray-500">
+                  <span id="macProxyStatus">Status: Unknown</span>
+                </div>
+                <details class="mt-2">
+                  <summary class="text-sm text-blue-600 cursor-pointer">Manual commands</summary>
+                  <pre class="mt-2 p-2 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto">
+# Enable proxy
+networksetup -setwebproxy "Wi-Fi" 127.0.0.1 8080
+networksetup -setsecurewebproxy "Wi-Fi" 127.0.0.1 8080
+
+# Disable proxy
+networksetup -setwebproxystate "Wi-Fi" off
+networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
+                </details>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div class="setup-step p-4 bg-gray-50 rounded-lg border" id="step-3">
+            <div class="flex items-start gap-4">
+              <div class="step-number w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">3</div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-gray-800">Boot iOS Simulator</h3>
+                <p class="text-gray-600 text-sm mt-1">Select and boot a simulator from the Simulators tab, or use this quick launcher:</p>
+                <div class="mt-3">
+                  <select id="quickSimulatorSelect" class="px-3 py-1.5 border rounded text-sm mr-2">
+                    <option value="">Loading simulators...</option>
+                  </select>
+                  <button onclick="bootSelectedSimulator(); markStepComplete(3);" class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">
+                    Boot Simulator
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4 -->
+          <div class="setup-step p-4 bg-gray-50 rounded-lg border" id="step-4">
+            <div class="flex items-start gap-4">
+              <div class="step-number w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">4</div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-gray-800">Install mitmproxy Certificate</h3>
+                <p class="text-gray-600 text-sm mt-1">For HTTPS traffic interception, install the mitmproxy certificate:</p>
+                <ol class="mt-3 space-y-2 text-sm text-gray-700">
+                  <li class="flex items-start gap-2">
+                    <span class="font-mono bg-gray-200 px-1.5 py-0.5 rounded text-xs">4.1</span>
+                    <span>Open <strong>Safari</strong> in the iOS Simulator</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="font-mono bg-gray-200 px-1.5 py-0.5 rounded text-xs">4.2</span>
+                    <span>Navigate to <code class="bg-yellow-100 px-1 rounded">http://mitm.it</code></span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="font-mono bg-gray-200 px-1.5 py-0.5 rounded text-xs">4.3</span>
+                    <span>Tap <strong>"Apple"</strong> to download the certificate</span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="font-mono bg-gray-200 px-1.5 py-0.5 rounded text-xs">4.4</span>
+                    <span>Go to <strong>Settings → General → VPN & Device Management</strong></span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="font-mono bg-gray-200 px-1.5 py-0.5 rounded text-xs">4.5</span>
+                    <span>Tap <strong>mitmproxy</strong> profile → <strong>Install</strong></span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="font-mono bg-gray-200 px-1.5 py-0.5 rounded text-xs">4.6</span>
+                    <span>Go to <strong>Settings → General → About → Certificate Trust Settings</strong></span>
+                  </li>
+                  <li class="flex items-start gap-2">
+                    <span class="font-mono bg-gray-200 px-1.5 py-0.5 rounded text-xs">4.7</span>
+                    <span>Enable <strong>full trust</strong> for mitmproxy certificate</span>
+                  </li>
+                </ol>
+                <div class="mt-3">
+                  <button onclick="markStepComplete(4);" class="px-3 py-1.5 bg-green-500 text-white text-sm rounded hover:bg-green-600">
+                    Mark as Complete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 5 -->
+          <div class="setup-step p-4 bg-gray-50 rounded-lg border" id="step-5">
+            <div class="flex items-start gap-4">
+              <div class="step-number w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">5</div>
+              <div class="flex-1">
+                <h3 class="font-semibold text-gray-800">Test the Connection</h3>
+                <p class="text-gray-600 text-sm mt-1">Open any app or Safari in the Simulator and make a network request. You should see traffic appear in the "Live Traffic" tab!</p>
+                <div class="mt-3">
+                  <button onclick="switchTab('traffic'); markStepComplete(5);" class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">
+                    View Live Traffic
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Troubleshooting -->
+        <div class="mt-8 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+          <h3 class="font-semibold text-yellow-800 mb-2">Troubleshooting</h3>
+          <ul class="text-sm text-yellow-700 space-y-1">
+            <li>• <strong>No traffic showing?</strong> Make sure Mac proxy is enabled and mitmproxy is running.</li>
+            <li>• <strong>HTTPS not working?</strong> Ensure the certificate is installed AND trusted (step 4.7).</li>
+            <li>• <strong>App uses certificate pinning?</strong> You'll need to disable pinning in the app code.</li>
+            <li>• <strong>Certificate expired?</strong> Delete old cert in Settings, restart mitmproxy, reinstall.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Traffic Tab -->
+    <div id="tab-traffic" class="tab-content">
+      <div class="bg-white rounded-lg shadow">
+        <div class="p-4 border-b flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <h2 class="font-semibold">Live Traffic</h2>
+            <span id="trafficCount" class="text-sm text-gray-500">0 requests</span>
+          </div>
+          <div class="flex gap-2">
+            <input type="text" id="trafficFilter" placeholder="Filter by URL..." class="px-3 py-1.5 border rounded text-sm w-64" oninput="filterTraffic()">
+            <button onclick="clearTraffic()" class="px-3 py-1.5 bg-red-100 text-red-600 text-sm rounded hover:bg-red-200">Clear</button>
+          </div>
+        </div>
+        <div id="trafficList" class="divide-y max-h-[600px] overflow-y-auto">
+          <div class="p-8 text-center text-gray-400">
+            No traffic captured yet. Make requests from iOS Simulator to see them here.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mock Rules Tab -->
+    <div id="tab-rules" class="tab-content">
+      <div class="bg-white rounded-lg shadow">
+        <div class="p-4 border-b flex items-center justify-between">
+          <h2 class="font-semibold">Mock Rules</h2>
+          <div class="flex gap-2">
+            <button onclick="exportRules()" class="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200">Export</button>
+            <button onclick="showRuleModal()" class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">+ Add Rule</button>
+          </div>
+        </div>
+        <div id="rulesList" class="divide-y">
+          <div class="p-8 text-center text-gray-400">
+            No mock rules configured. Create a rule to start mocking API responses.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Simulators Tab -->
+    <div id="tab-simulators" class="tab-content">
+      <div class="bg-white rounded-lg shadow">
+        <div class="p-4 border-b flex items-center justify-between">
+          <h2 class="font-semibold">iOS Simulators</h2>
+          <button onclick="loadSimulators()" class="px-3 py-1.5 bg-gray-100 text-gray-700 text-sm rounded hover:bg-gray-200">Refresh</button>
+        </div>
+        <div id="simulatorsList" class="divide-y">
+          <div class="p-8 text-center text-gray-400">Loading simulators...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recordings Tab -->
+    <div id="tab-recordings" class="tab-content">
+      <div class="bg-white rounded-lg shadow">
+        <div class="p-4 border-b flex items-center justify-between">
+          <div class="flex items-center gap-4">
+            <h2 class="font-semibold">Recordings</h2>
+            <span id="recordingStatus" class="text-sm text-gray-500"></span>
+          </div>
+          <div class="flex gap-2">
+            <button id="recordBtn" onclick="toggleRecording()" class="px-3 py-1.5 bg-red-500 text-white text-sm rounded hover:bg-red-600">
+              Start Recording
+            </button>
+          </div>
+        </div>
+        <div id="recordingsList" class="divide-y">
+          <div class="p-8 text-center text-gray-400">No recordings yet. Start recording to capture traffic sessions.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tutorial Tab -->
+    <div id="tab-tutorial" class="tab-content">
+      <div class="space-y-6">
+        <!-- Introduction -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h2 class="text-xl font-bold text-gray-800 mb-2">Mock Rules Tutorial</h2>
+          <p class="text-gray-600">Learn how to intercept API requests and return custom responses for testing your iOS app.</p>
+        </div>
+
+        <!-- What is Mocking -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-3">What is API Mocking?</h3>
+          <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+            <p class="text-blue-800">API Mocking allows you to intercept network requests and return <strong>fake responses</strong> instead of calling the real server.</p>
+          </div>
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="p-4 bg-gray-50 rounded-lg">
+              <h4 class="font-semibold text-green-700 mb-2">Use Cases</h4>
+              <ul class="text-sm text-gray-600 space-y-1">
+                <li>• Test error scenarios (500, 404, 401)</li>
+                <li>• Test with specific data</li>
+                <li>• Work offline without real API</li>
+                <li>• Simulate slow network</li>
+                <li>• Test edge cases</li>
+              </ul>
+            </div>
+            <div class="p-4 bg-gray-50 rounded-lg">
+              <h4 class="font-semibold text-blue-700 mb-2">How it Works</h4>
+              <div class="text-sm text-gray-600 font-mono bg-white p-3 rounded border">
+                App Request<br>
+                &nbsp;&nbsp;&nbsp;↓<br>
+                mitmproxy<br>
+                &nbsp;&nbsp;&nbsp;↓<br>
+                Check Mock Rules<br>
+                &nbsp;&nbsp;&nbsp;↓<br>
+                Match? → Return Fake Response<br>
+                No Match? → Forward to Server
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Method 1: From Traffic -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold">1</span>
+            <h3 class="text-lg font-semibold text-gray-800">Method 1: Create Mock from Live Traffic (Easiest)</h3>
+          </div>
+
+          <div class="space-y-4">
+            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+              <span class="w-6 h-6 bg-gray-300 text-gray-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
+              <div>
+                <h4 class="font-semibold">Capture Traffic</h4>
+                <p class="text-sm text-gray-600">Use your app normally. All API requests will appear in the <strong>Live Traffic</strong> tab.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+              <span class="w-6 h-6 bg-gray-300 text-gray-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
+              <div>
+                <h4 class="font-semibold">Click on a Request</h4>
+                <p class="text-sm text-gray-600">Find the API request you want to mock and click on it to see details.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+              <span class="w-6 h-6 bg-gray-300 text-gray-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
+              <div>
+                <h4 class="font-semibold">Click "Create Mock Rule"</h4>
+                <p class="text-sm text-gray-600">This will pre-fill the mock rule form with the actual response data.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+              <span class="w-6 h-6 bg-gray-300 text-gray-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">4</span>
+              <div>
+                <h4 class="font-semibold">Modify the Response</h4>
+                <p class="text-sm text-gray-600">Change the response body, status code, or add a delay as needed.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+              <span class="w-6 h-6 bg-gray-300 text-gray-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">5</span>
+              <div>
+                <h4 class="font-semibold">Save and Test</h4>
+                <p class="text-sm text-gray-600">Save the rule and refresh your app. The mocked response will be returned!</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <button onclick="switchTab('traffic')" class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+              Go to Live Traffic →
+            </button>
+          </div>
+        </div>
+
+        <!-- Method 2: Manual -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold">2</span>
+            <h3 class="text-lg font-semibold text-gray-800">Method 2: Create Mock Rule Manually</h3>
+          </div>
+
+          <div class="space-y-4">
+            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+              <span class="w-6 h-6 bg-gray-300 text-gray-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">1</span>
+              <div>
+                <h4 class="font-semibold">Go to Mock Rules Tab</h4>
+                <p class="text-sm text-gray-600">Click on the <strong>Mock Rules</strong> tab in the navigation.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+              <span class="w-6 h-6 bg-gray-300 text-gray-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">2</span>
+              <div>
+                <h4 class="font-semibold">Click "+ Add Rule"</h4>
+                <p class="text-sm text-gray-600">This opens the rule creation form.</p>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
+              <span class="w-6 h-6 bg-gray-300 text-gray-700 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0">3</span>
+              <div>
+                <h4 class="font-semibold">Fill in the Rule Details</h4>
+                <p class="text-sm text-gray-600 mb-2">Configure the URL pattern, method, and response.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <button onclick="switchTab('rules')" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+              Go to Mock Rules →
+            </button>
+          </div>
+        </div>
+
+        <!-- Rule Fields Explained -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">Rule Fields Explained</h3>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-gray-100">
+                  <th class="text-left p-3 font-semibold">Field</th>
+                  <th class="text-left p-3 font-semibold">Description</th>
+                  <th class="text-left p-3 font-semibold">Example</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y">
+                <tr>
+                  <td class="p-3 font-medium">Description</td>
+                  <td class="p-3 text-gray-600">A name to identify this rule</td>
+                  <td class="p-3 font-mono text-xs bg-gray-50">Mock login error</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-medium">URL Pattern</td>
+                  <td class="p-3 text-gray-600">Which URLs to match</td>
+                  <td class="p-3 font-mono text-xs bg-gray-50">*/api/v1/login*</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-medium">Pattern Type</td>
+                  <td class="p-3 text-gray-600">How to match the URL</td>
+                  <td class="p-3 font-mono text-xs bg-gray-50">wildcard, exact, regex</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-medium">Method</td>
+                  <td class="p-3 text-gray-600">HTTP method to match</td>
+                  <td class="p-3 font-mono text-xs bg-gray-50">GET, POST, ANY</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-medium">Status Code</td>
+                  <td class="p-3 text-gray-600">Response HTTP status</td>
+                  <td class="p-3 font-mono text-xs bg-gray-50">200, 401, 500</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-medium">Response Body</td>
+                  <td class="p-3 text-gray-600">The fake JSON to return</td>
+                  <td class="p-3 font-mono text-xs bg-gray-50">{"error": "Unauthorized"}</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-medium">Delay (ms)</td>
+                  <td class="p-3 text-gray-600">Simulate slow network</td>
+                  <td class="p-3 font-mono text-xs bg-gray-50">2000 = 2 seconds</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pattern Types -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">URL Pattern Types</h3>
+
+          <div class="space-y-4">
+            <div class="p-4 border rounded-lg">
+              <h4 class="font-semibold text-purple-700">Wildcard (Recommended)</h4>
+              <p class="text-sm text-gray-600 mb-2">Use <code class="bg-gray-100 px-1 rounded">*</code> to match any characters</p>
+              <div class="font-mono text-sm bg-gray-800 text-green-400 p-3 rounded">
+                */api/users/*<br>
+                <span class="text-gray-500"># Matches: https://api.example.com/api/users/123</span><br>
+                <span class="text-gray-500"># Matches: https://api.example.com/api/users/profile</span>
+              </div>
+            </div>
+
+            <div class="p-4 border rounded-lg">
+              <h4 class="font-semibold text-blue-700">Exact Match</h4>
+              <p class="text-sm text-gray-600 mb-2">Must match the complete URL exactly</p>
+              <div class="font-mono text-sm bg-gray-800 text-green-400 p-3 rounded">
+                https://api.example.com/api/v1/login<br>
+                <span class="text-gray-500"># Only matches this exact URL</span>
+              </div>
+            </div>
+
+            <div class="p-4 border rounded-lg">
+              <h4 class="font-semibold text-orange-700">Regex (Advanced)</h4>
+              <p class="text-sm text-gray-600 mb-2">Use regular expressions for complex matching</p>
+              <div class="font-mono text-sm bg-gray-800 text-green-400 p-3 rounded">
+                .*\/users\/\d+<br>
+                <span class="text-gray-500"># Matches: /users/123, /users/456</span><br>
+                <span class="text-gray-500"># Does NOT match: /users/profile</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Examples -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">Example Mock Rules</h3>
+
+          <div class="space-y-4">
+            <!-- Example 1: Error Response -->
+            <div class="p-4 border-l-4 border-red-500 bg-red-50 rounded-r-lg">
+              <h4 class="font-semibold text-red-700 mb-2">Example 1: Mock Login Error (401)</h4>
+              <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                  <p class="text-xs text-gray-500 mb-1">Configuration:</p>
+                  <div class="font-mono text-xs bg-white p-2 rounded border">
+                    URL Pattern: */api/*/login*<br>
+                    Method: POST<br>
+                    Status Code: 401<br>
+                    Delay: 500
+                  </div>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 mb-1">Response Body:</p>
+                  <pre class="font-mono text-xs bg-white p-2 rounded border overflow-x-auto">{
+  "error": "Invalid credentials",
+  "code": "AUTH_FAILED"
+}</pre>
+                </div>
+              </div>
+            </div>
+
+            <!-- Example 2: Success Response -->
+            <div class="p-4 border-l-4 border-green-500 bg-green-50 rounded-r-lg">
+              <h4 class="font-semibold text-green-700 mb-2">Example 2: Mock User Profile (200)</h4>
+              <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                  <p class="text-xs text-gray-500 mb-1">Configuration:</p>
+                  <div class="font-mono text-xs bg-white p-2 rounded border">
+                    URL Pattern: */api/users/profile*<br>
+                    Method: GET<br>
+                    Status Code: 200<br>
+                    Delay: 0
+                  </div>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 mb-1">Response Body:</p>
+                  <pre class="font-mono text-xs bg-white p-2 rounded border overflow-x-auto">{
+  "id": 123,
+  "name": "Test User",
+  "email": "test@example.com",
+  "balance": 1000000
+}</pre>
+                </div>
+              </div>
+            </div>
+
+            <!-- Example 3: Server Error -->
+            <div class="p-4 border-l-4 border-orange-500 bg-orange-50 rounded-r-lg">
+              <h4 class="font-semibold text-orange-700 mb-2">Example 3: Mock Server Error (500)</h4>
+              <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                  <p class="text-xs text-gray-500 mb-1">Configuration:</p>
+                  <div class="font-mono text-xs bg-white p-2 rounded border">
+                    URL Pattern: */api/orders*<br>
+                    Method: ANY<br>
+                    Status Code: 500<br>
+                    Delay: 1000
+                  </div>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 mb-1">Response Body:</p>
+                  <pre class="font-mono text-xs bg-white p-2 rounded border overflow-x-auto">{
+  "error": "Internal Server Error",
+  "message": "Database connection failed"
+}</pre>
+                </div>
+              </div>
+            </div>
+
+            <!-- Example 4: Slow Network -->
+            <div class="p-4 border-l-4 border-blue-500 bg-blue-50 rounded-r-lg">
+              <h4 class="font-semibold text-blue-700 mb-2">Example 4: Simulate Slow Network</h4>
+              <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                  <p class="text-xs text-gray-500 mb-1">Configuration:</p>
+                  <div class="font-mono text-xs bg-white p-2 rounded border">
+                    URL Pattern: */api/*<br>
+                    Method: ANY<br>
+                    Status Code: 200<br>
+                    <strong>Delay: 5000</strong> (5 seconds)
+                  </div>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-500 mb-1">Use case:</p>
+                  <p class="text-sm text-gray-600">Test how your app handles slow network. Check if loading spinners and timeouts work correctly.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tips -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <h3 class="text-lg font-semibold text-yellow-800 mb-3">Tips & Best Practices</h3>
+          <ul class="space-y-2 text-sm text-yellow-700">
+            <li class="flex items-start gap-2">
+              <span class="text-yellow-500">•</span>
+              <span><strong>Start with Live Traffic:</strong> Always capture real traffic first to understand the exact URL patterns and response format.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-yellow-500">•</span>
+              <span><strong>Use Wildcard patterns:</strong> They're easier to write and more flexible than exact matches.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-yellow-500">•</span>
+              <span><strong>Toggle rules on/off:</strong> Quickly enable/disable rules without deleting them.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-yellow-500">•</span>
+              <span><strong>Test one rule at a time:</strong> If multiple rules could match, disable others to test specific scenarios.</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-yellow-500">•</span>
+              <span><strong>Check the purple "Mocked" badge:</strong> In Live Traffic, mocked requests show a purple badge to confirm the rule is working.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Quick Start Button -->
+        <div class="bg-white rounded-lg shadow p-6 text-center">
+          <h3 class="text-lg font-semibold text-gray-800 mb-2">Ready to Start?</h3>
+          <p class="text-gray-600 mb-4">Go to Live Traffic, click on any request, and create your first mock rule!</p>
+          <button onclick="switchTab('traffic')" class="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold">
+            Start Mocking →
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Rule Modal -->
+  <div id="ruleModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+      <div class="p-4 border-b flex items-center justify-between">
+        <h3 class="font-semibold" id="ruleModalTitle">Add Mock Rule</h3>
+        <button onclick="hideRuleModal()" class="text-gray-400 hover:text-gray-600">&times;</button>
+      </div>
+      <form id="ruleForm" onsubmit="saveRule(event)" class="p-4 space-y-4">
+        <input type="hidden" id="ruleId">
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <input type="text" id="ruleDescription" class="w-full px-3 py-2 border rounded" placeholder="e.g., Mock user login response">
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">URL Pattern</label>
+            <input type="text" id="ruleUrlPattern" class="w-full px-3 py-2 border rounded" placeholder="*/api/users/*" required>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Pattern Type</label>
+            <select id="rulePatternType" class="w-full px-3 py-2 border rounded">
+              <option value="wildcard">Wildcard (*)</option>
+              <option value="exact">Exact Match</option>
+              <option value="regex">Regex</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">HTTP Method</label>
+            <select id="ruleMethod" class="w-full px-3 py-2 border rounded">
+              <option value="ANY">ANY</option>
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="DELETE">DELETE</option>
+              <option value="PATCH">PATCH</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Status Code</label>
+            <input type="number" id="ruleStatusCode" class="w-full px-3 py-2 border rounded" value="200" min="100" max="599">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Response Headers (JSON)</label>
+          <textarea id="ruleHeaders" class="w-full px-3 py-2 border rounded font-mono text-sm" rows="2">{"Content-Type": "application/json"}</textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Response Body</label>
+          <textarea id="ruleBody" class="w-full px-3 py-2 border rounded font-mono text-sm" rows="6" placeholder='{"message": "Mocked response"}'></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Delay (ms)</label>
+          <input type="number" id="ruleDelay" class="w-full px-3 py-2 border rounded" value="0" min="0" max="30000">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-4 border-t">
+          <button type="button" onclick="hideRuleModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
+          <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Save Rule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Traffic Detail Modal -->
+  <div id="trafficModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto m-4">
+      <div class="p-4 border-b flex items-center justify-between sticky top-0 bg-white">
+        <h3 class="font-semibold">Request Details</h3>
+        <div class="flex gap-2">
+          <button onclick="createRuleFromTraffic()" class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">Create Mock Rule</button>
+          <button onclick="hideTrafficModal()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+        </div>
+      </div>
+      <div id="trafficDetail" class="p-4"></div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let proxyRunning = false;
+    let isRecording = false;
+    let trafficData = [];
+    let rulesData = [];
+    let selectedTraffic = null;
+    let ws = null;
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      connectWebSocket();
+      loadSimulators();
+      loadRules();
+      loadRecordings();
+      checkMacProxyStatus();
+    });
+
+    // WebSocket connection
+    function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        handleWebSocketMessage(msg);
+      };
+
+      ws.onclose = () => {
+        setTimeout(connectWebSocket, 3000);
+      };
+    }
+
+    function handleWebSocketMessage(msg) {
+      switch (msg.type) {
+        case 'status':
+          updateProxyStatus(msg.data.proxy);
+          if (msg.data.recording) {
+            isRecording = msg.data.recording.isRecording;
+            updateRecordingUI();
+          }
+          break;
+        case 'traffic':
+          addTrafficItem(msg.data);
+          break;
+        case 'history':
+          trafficData = msg.data;
+          renderTraffic();
+          break;
+        case 'historyCleared':
+          trafficData = [];
+          renderTraffic();
+          break;
+        case 'rulesUpdated':
+          rulesData = msg.data;
+          renderRules();
+          break;
+        case 'recordingStarted':
+          isRecording = true;
+          updateRecordingUI();
+          break;
+        case 'recordingStopped':
+          isRecording = false;
+          updateRecordingUI();
+          loadRecordings();
+          break;
+      }
+    }
+
+    // Proxy control
+    async function toggleProxy() {
+      const endpoint = proxyRunning ? '/api/proxy/stop' : '/api/proxy/start';
+      try {
+        const res = await fetch(endpoint, { method: 'POST' });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function updateProxyStatus(status) {
+      proxyRunning = status.running;
+      const dot = document.getElementById('proxyStatus');
+      const text = document.getElementById('proxyStatusText');
+      const btn = document.getElementById('toggleProxy');
+
+      if (proxyRunning) {
+        dot.className = 'status-dot status-running';
+        text.textContent = `Proxy Running (PID: ${status.pid})`;
+        btn.textContent = 'Stop Proxy';
+        btn.className = 'px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition';
+      } else {
+        dot.className = 'status-dot status-stopped';
+        text.textContent = 'Proxy Stopped';
+        btn.textContent = 'Start Proxy';
+        btn.className = 'px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition';
+      }
+    }
+
+    // Mac proxy control
+    async function enableMacProxy() {
+      try {
+        const res = await fetch('/api/mac-proxy/enable', { method: 'POST' });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        checkMacProxyStatus();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function disableMacProxy() {
+      try {
+        const res = await fetch('/api/mac-proxy/disable', { method: 'POST' });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        checkMacProxyStatus();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function checkMacProxyStatus() {
+      try {
+        const res = await fetch('/api/mac-proxy/status');
+        const data = await res.json();
+        const statusEl = document.getElementById('macProxyStatus');
+        if (data.http?.enabled || data.https?.enabled) {
+          statusEl.textContent = `Status: Enabled (${data.http?.server}:${data.http?.port})`;
+          statusEl.className = 'text-xs text-green-600';
+        } else {
+          statusEl.textContent = 'Status: Disabled';
+          statusEl.className = 'text-xs text-red-600';
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Tab switching
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => {
+        el.classList.remove('border-blue-500', 'text-blue-600');
+        el.classList.add('border-transparent', 'text-gray-500');
+      });
+
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+      const btn = document.querySelector(`[data-tab="${tabName}"]`);
+      btn.classList.remove('border-transparent', 'text-gray-500');
+      btn.classList.add('border-blue-500', 'text-blue-600');
+    }
+
+    // Setup steps
+    function markStepComplete(stepNum) {
+      const step = document.getElementById(`step-${stepNum}`);
+      step.classList.add('completed');
+    }
+
+    // Simulators
+    async function loadSimulators() {
+      try {
+        const res = await fetch('/api/simulators');
+        const simulators = await res.json();
+        renderSimulators(simulators);
+
+        // Update quick select dropdown
+        const select = document.getElementById('quickSimulatorSelect');
+        select.innerHTML = '<option value="">Select simulator...</option>' +
+          simulators
+            .filter(s => s.isAvailable)
+            .map(s => `<option value="${s.udid}" ${s.state === 'booted' ? 'selected' : ''}>${s.name} (${s.os}) ${s.state === 'booted' ? '- Booted' : ''}</option>`)
+            .join('');
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderSimulators(simulators) {
+      const container = document.getElementById('simulatorsList');
+      if (simulators.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center text-gray-400">No simulators found</div>';
+        return;
+      }
+
+      container.innerHTML = simulators
+        .filter(s => s.isAvailable)
+        .map(s => `
+          <div class="p-4 flex items-center justify-between hover:bg-gray-50">
+            <div>
+              <div class="font-medium">${s.name}</div>
+              <div class="text-sm text-gray-500">${s.os} - ${s.udid.slice(0, 8)}...</div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-1 text-xs rounded ${s.state === 'booted' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}">${s.state}</span>
+              ${s.state === 'booted'
+                ? `<button onclick="shutdownSimulator('${s.udid}')" class="px-3 py-1 bg-red-100 text-red-600 text-sm rounded hover:bg-red-200">Shutdown</button>`
+                : `<button onclick="bootSimulator('${s.udid}')" class="px-3 py-1 bg-green-100 text-green-600 text-sm rounded hover:bg-green-200">Boot</button>`
+              }
+            </div>
+          </div>
+        `).join('');
+    }
+
+    async function bootSimulator(udid) {
+      try {
+        const res = await fetch('/api/simulators/boot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ udid })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        loadSimulators();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function shutdownSimulator(udid) {
+      try {
+        const res = await fetch('/api/simulators/shutdown', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ udid })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        loadSimulators();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function bootSelectedSimulator() {
+      const select = document.getElementById('quickSimulatorSelect');
+      if (select.value) {
+        bootSimulator(select.value);
+      } else {
+        alert('Please select a simulator first');
+      }
+    }
+
+    // Traffic
+    function addTrafficItem(item) {
+      trafficData.push(item);
+      if (trafficData.length > 500) trafficData.shift();
+      renderTraffic();
+    }
+
+    function renderTraffic() {
+      const container = document.getElementById('trafficList');
+      const filter = document.getElementById('trafficFilter').value.toLowerCase();
+
+      const filtered = trafficData.filter(t =>
+        !filter || t.url.toLowerCase().includes(filter)
+      );
+
+      document.getElementById('trafficCount').textContent = `${filtered.length} requests`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center text-gray-400">No traffic captured yet.</div>';
+        return;
+      }
+
+      container.innerHTML = filtered.slice().reverse().map((t, i) => {
+        const statusClass = t.response
+          ? (t.response.status < 300 ? 'status-2xx' : t.response.status < 400 ? 'status-3xx' : t.response.status < 500 ? 'status-4xx' : 'status-5xx')
+          : '';
+        const methodClass = `method-${t.method.toLowerCase()}`;
+
+        return `
+          <div class="traffic-item p-3 cursor-pointer flex items-center gap-4" onclick="showTrafficDetail(${filtered.length - 1 - i})">
+            <span class="font-mono text-sm font-bold w-16 ${methodClass}">${t.method}</span>
+            <span class="font-mono text-sm ${statusClass} w-12">${t.response?.status || '-'}</span>
+            <span class="flex-1 text-sm truncate ${t.mocked ? 'text-purple-600' : ''}">${t.url}</span>
+            ${t.mocked ? '<span class="px-2 py-0.5 bg-purple-100 text-purple-600 text-xs rounded">Mocked</span>' : ''}
+            <span class="text-xs text-gray-400">${t.duration ? t.duration + 'ms' : ''}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filterTraffic() {
+      renderTraffic();
+    }
+
+    async function clearTraffic() {
+      try {
+        await fetch('/api/traffic/history', { method: 'DELETE' });
+        trafficData = [];
+        renderTraffic();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function showTrafficDetail(index) {
+      selectedTraffic = trafficData[index];
+      const t = selectedTraffic;
+
+      const detail = document.getElementById('trafficDetail');
+      detail.innerHTML = `
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div><span class="text-gray-500">Method:</span> <span class="font-mono font-bold">${t.method}</span></div>
+            <div><span class="text-gray-500">Status:</span> <span class="font-mono">${t.response?.status || '-'}</span></div>
+            <div><span class="text-gray-500">Duration:</span> <span class="font-mono">${t.duration || '-'}ms</span></div>
+            <div><span class="text-gray-500">Size:</span> <span class="font-mono">${t.response?.size || '-'} bytes</span></div>
+          </div>
+
+          <div>
+            <span class="text-gray-500">URL:</span>
+            <div class="font-mono text-sm break-all bg-gray-50 p-2 rounded mt-1">${t.url}</div>
+          </div>
+
+          <details>
+            <summary class="font-medium cursor-pointer">Request Headers</summary>
+            <pre class="mt-2 p-3 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto">${JSON.stringify(t.requestHeaders || {}, null, 2)}</pre>
+          </details>
+
+          ${t.requestBody ? `
+            <details>
+              <summary class="font-medium cursor-pointer">Request Body</summary>
+              <pre class="mt-2 p-3 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto">${formatBody(t.requestBody)}</pre>
+            </details>
+          ` : ''}
+
+          <details open>
+            <summary class="font-medium cursor-pointer">Response Headers</summary>
+            <pre class="mt-2 p-3 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto">${JSON.stringify(t.response?.headers || {}, null, 2)}</pre>
+          </details>
+
+          <details open>
+            <summary class="font-medium cursor-pointer">Response Body</summary>
+            <pre class="mt-2 p-3 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto max-h-96 overflow-y-auto">${formatBody(t.response?.body)}</pre>
+          </details>
+        </div>
+      `;
+
+      document.getElementById('trafficModal').classList.remove('hidden');
+      document.getElementById('trafficModal').classList.add('flex');
+    }
+
+    function hideTrafficModal() {
+      document.getElementById('trafficModal').classList.add('hidden');
+      document.getElementById('trafficModal').classList.remove('flex');
+    }
+
+    function formatBody(body) {
+      if (!body) return '(empty)';
+      try {
+        return JSON.stringify(JSON.parse(body), null, 2);
+      } catch {
+        return body;
+      }
+    }
+
+    // Rules
+    async function loadRules() {
+      try {
+        const res = await fetch('/api/rules');
+        rulesData = await res.json();
+        renderRules();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderRules() {
+      const container = document.getElementById('rulesList');
+      if (rulesData.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center text-gray-400">No mock rules configured.</div>';
+        return;
+      }
+
+      container.innerHTML = rulesData.map(r => `
+        <div class="p-4 flex items-center justify-between hover:bg-gray-50 ${!r.enabled ? 'opacity-50' : ''}">
+          <div class="flex-1">
+            <div class="font-medium">${r.description || r.urlPattern}</div>
+            <div class="text-sm text-gray-500">
+              <span class="font-mono">${r.method}</span>
+              <span class="font-mono">${r.urlPattern}</span>
+              → <span class="font-mono">${r.statusCode}</span>
+              ${r.delay ? `(${r.delay}ms delay)` : ''}
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="toggleRule('${r.id}')" class="px-3 py-1 ${r.enabled ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'} text-sm rounded">
+              ${r.enabled ? 'Enabled' : 'Disabled'}
+            </button>
+            <button onclick="editRule('${r.id}')" class="px-3 py-1 bg-blue-100 text-blue-600 text-sm rounded hover:bg-blue-200">Edit</button>
+            <button onclick="deleteRule('${r.id}')" class="px-3 py-1 bg-red-100 text-red-600 text-sm rounded hover:bg-red-200">Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function showRuleModal(rule = null) {
+      document.getElementById('ruleModalTitle').textContent = rule ? 'Edit Mock Rule' : 'Add Mock Rule';
+      document.getElementById('ruleId').value = rule?.id || '';
+      document.getElementById('ruleDescription').value = rule?.description || '';
+      document.getElementById('ruleUrlPattern').value = rule?.urlPattern || '';
+      document.getElementById('rulePatternType').value = rule?.urlPatternType || 'wildcard';
+      document.getElementById('ruleMethod').value = rule?.method || 'ANY';
+      document.getElementById('ruleStatusCode').value = rule?.statusCode || 200;
+      document.getElementById('ruleHeaders').value = JSON.stringify(rule?.headers || { 'Content-Type': 'application/json' }, null, 2);
+      document.getElementById('ruleBody').value = typeof rule?.body === 'object' ? JSON.stringify(rule.body, null, 2) : (rule?.body || '');
+      document.getElementById('ruleDelay').value = rule?.delay || 0;
+
+      document.getElementById('ruleModal').classList.remove('hidden');
+      document.getElementById('ruleModal').classList.add('flex');
+    }
+
+    function hideRuleModal() {
+      document.getElementById('ruleModal').classList.add('hidden');
+      document.getElementById('ruleModal').classList.remove('flex');
+    }
+
+    async function saveRule(event) {
+      event.preventDefault();
+
+      const id = document.getElementById('ruleId').value;
+      let headers;
+      try {
+        headers = JSON.parse(document.getElementById('ruleHeaders').value);
+      } catch {
+        alert('Invalid JSON in headers');
+        return;
+      }
+
+      const ruleData = {
+        description: document.getElementById('ruleDescription').value,
+        urlPattern: document.getElementById('ruleUrlPattern').value,
+        urlPatternType: document.getElementById('rulePatternType').value,
+        method: document.getElementById('ruleMethod').value,
+        statusCode: parseInt(document.getElementById('ruleStatusCode').value),
+        headers,
+        body: document.getElementById('ruleBody').value,
+        delay: parseInt(document.getElementById('ruleDelay').value) || 0
+      };
+
+      try {
+        const url = id ? `/api/rules/${id}` : '/api/rules';
+        const method = id ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(ruleData)
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        hideRuleModal();
+        loadRules();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    async function toggleRule(id) {
+      try {
+        await fetch(`/api/rules/${id}/toggle`, { method: 'POST' });
+        loadRules();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function editRule(id) {
+      const rule = rulesData.find(r => r.id === id);
+      if (rule) showRuleModal(rule);
+    }
+
+    async function deleteRule(id) {
+      if (!confirm('Are you sure you want to delete this rule?')) return;
+      try {
+        await fetch(`/api/rules/${id}`, { method: 'DELETE' });
+        loadRules();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function createRuleFromTraffic() {
+      if (!selectedTraffic) return;
+      const t = selectedTraffic;
+      showRuleModal({
+        description: `Mock for ${t.url}`,
+        urlPattern: t.url,
+        urlPatternType: 'exact',
+        method: t.method,
+        statusCode: t.response?.status || 200,
+        headers: t.response?.headers || { 'Content-Type': 'application/json' },
+        body: t.response?.body || '{}'
+      });
+      hideTrafficModal();
+    }
+
+    async function exportRules() {
+      window.open('/api/rules/export', '_blank');
+    }
+
+    // Recordings
+    async function loadRecordings() {
+      try {
+        const res = await fetch('/api/recordings');
+        const recordings = await res.json();
+        renderRecordings(recordings);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderRecordings(recordings) {
+      const container = document.getElementById('recordingsList');
+      if (recordings.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center text-gray-400">No recordings yet.</div>';
+        return;
+      }
+
+      container.innerHTML = recordings.map(r => `
+        <div class="p-4 flex items-center justify-between hover:bg-gray-50">
+          <div>
+            <div class="font-medium">${r.name}</div>
+            <div class="text-sm text-gray-500">${r.requestCount} requests - ${new Date(r.startedAt).toLocaleString()}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="convertToRules('${r.id}')" class="px-3 py-1 bg-blue-100 text-blue-600 text-sm rounded hover:bg-blue-200">Convert to Rules</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function toggleRecording() {
+      try {
+        if (isRecording) {
+          await fetch('/api/recordings/stop', { method: 'POST' });
+        } else {
+          const name = prompt('Recording name:', `Recording ${new Date().toLocaleString()}`);
+          if (name === null) return;
+          await fetch('/api/recordings/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+          });
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    function updateRecordingUI() {
+      const btn = document.getElementById('recordBtn');
+      const status = document.getElementById('recordingStatus');
+
+      if (isRecording) {
+        btn.textContent = 'Stop Recording';
+        btn.className = 'px-3 py-1.5 bg-gray-500 text-white text-sm rounded hover:bg-gray-600';
+        status.innerHTML = '<span class="inline-block w-2 h-2 bg-red-500 rounded-full animate-pulse mr-1"></span> Recording...';
+      } else {
+        btn.textContent = 'Start Recording';
+        btn.className = 'px-3 py-1.5 bg-red-500 text-white text-sm rounded hover:bg-red-600';
+        status.textContent = '';
+      }
+    }
+
+    async function convertToRules(id) {
+      try {
+        const res = await fetch(`/api/recordings/${id}/to-rules`, { method: 'POST' });
+        const rules = await res.json();
+        alert(`Created ${rules.length} mock rules from recording`);
+        loadRules();
+        switchTab('rules');
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>
