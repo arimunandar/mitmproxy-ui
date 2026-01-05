@@ -232,31 +232,76 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
     <!-- Live Traffic Tab -->
     <div id="tab-traffic" class="tab-content">
       <div class="bg-white rounded-lg shadow">
-        <div class="p-4 border-b flex items-center justify-between">
-          <div class="flex items-center gap-4">
-            <h2 class="font-semibold">Live Traffic</h2>
-            <span id="trafficCount" class="text-sm text-gray-500">0 requests</span>
-            <button id="trafficPauseBtn" onclick="toggleTrafficPause()" class="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 text-sm rounded hover:bg-green-200">
-              <span id="trafficPauseIcon">⏸</span>
-              <span id="trafficPauseText">Pause</span>
-            </button>
-          </div>
-          <div class="flex gap-2 items-center">
-            <div class="relative">
-              <button onclick="toggleBaseUrlDropdown()" class="flex items-center gap-2 px-3 py-1.5 border rounded text-sm bg-white hover:bg-gray-50">
-                <span>Filter by Host</span>
-                <span class="text-gray-400">▼</span>
-              </button>
-              <div id="baseUrlDropdown" class="hidden absolute top-full left-0 mt-1 bg-white border rounded-lg shadow-lg z-10 w-72">
-                <div class="p-2 text-xs text-gray-500 border-b flex justify-between items-center">
-                  <span>Click to add/remove filter:</span>
-                  <button onclick="clearAllFilters()" class="text-red-500 hover:text-red-700 text-xs">Clear all</button>
-                </div>
-                <div id="baseUrlList" class="max-h-48 overflow-y-auto"></div>
+        <!-- Header Row -->
+        <div class="p-4 border-b">
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <h2 class="font-semibold text-lg whitespace-nowrap">Live Traffic</h2>
+              <span id="trafficCount" class="px-2 py-0.5 bg-gray-100 text-gray-600 text-sm rounded-full whitespace-nowrap">0 requests</span>
+            </div>
+            <!-- Search field -->
+            <div class="flex-1 max-w-md">
+              <div class="relative">
+                <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <input type="text" id="searchInput" placeholder="Search URL, path, query..." class="w-full pl-9 pr-8 py-1.5 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" oninput="onSearchInput()">
+                <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
               </div>
             </div>
+            <div class="flex items-center gap-2">
+              <button id="trafficPauseBtn" onclick="toggleTrafficPause()" class="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition">
+                <span id="trafficPauseIcon">⏸</span>
+                <span id="trafficPauseText">Pause</span>
+              </button>
+              <div class="relative">
+                <button onclick="toggleBaseUrlDropdown()" id="filterDropdownBtn" class="flex items-center gap-2 px-3 py-1.5 border rounded-lg text-sm bg-white hover:bg-gray-50 transition">
+                  <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path>
+                  </svg>
+                  <span>Filter</span>
+                  <span id="filterCount" class="hidden px-1.5 py-0.5 bg-blue-500 text-white text-xs rounded-full">0</span>
+                  <span class="text-gray-400">▼</span>
+                </button>
+                <div id="baseUrlDropdown" class="hidden absolute top-full right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 w-80">
+                  <div class="p-3 border-b bg-gray-50 rounded-t-lg">
+                    <div class="flex justify-between items-center">
+                      <span class="font-medium text-sm text-gray-700">Filter by Host</span>
+                      <button onclick="clearAllFilters()" class="text-red-500 hover:text-red-700 text-xs font-medium">Clear all</button>
+                    </div>
+                  </div>
+                  <!-- Custom filter input -->
+                  <div class="p-2 border-b">
+                    <div class="flex gap-2">
+                      <input type="text" id="customFilterInput" placeholder="e.g., tuntun.co.id" class="flex-1 px-2 py-1.5 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500" onkeydown="if(event.key==='Enter')addCustomFilter()">
+                      <button onclick="addCustomFilter()" class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">Add</button>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-1">Add custom pattern (matches subdomains)</p>
+                  </div>
+                  <div id="baseUrlList" class="max-h-48 overflow-y-auto"></div>
+                  <div class="p-2 border-t bg-gray-50 rounded-b-lg">
+                    <p class="text-xs text-gray-400 text-center">Hosts are auto-detected from traffic</p>
+                  </div>
+                </div>
+              </div>
+              <button onclick="clearTraffic()" class="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-sm rounded-lg hover:bg-red-100 transition border border-red-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                Clear
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Filter Tags Row (shown when filters active) -->
+        <div id="filterTagsRow" class="hidden px-4 py-2 bg-blue-50 border-b">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs text-blue-600 font-medium">Active filters:</span>
             <div id="filterTags" class="flex gap-1 flex-wrap"></div>
-            <button onclick="clearTraffic()" class="px-3 py-1.5 bg-red-100 text-red-600 text-sm rounded hover:bg-red-200">Clear All</button>
           </div>
         </div>
         <!-- Hidden input to maintain compatibility -->
@@ -1070,70 +1115,120 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
 
   <!-- Rule Modal -->
   <div id="ruleModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
-      <div class="p-4 border-b flex items-center justify-between">
-        <h3 class="font-semibold" id="ruleModalTitle">Add Mock Rule</h3>
-        <button onclick="hideRuleModal()" class="text-gray-400 hover:text-gray-600">&times;</button>
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden m-4 flex flex-col">
+      <!-- Header -->
+      <div class="p-4 border-b flex items-center justify-between bg-gray-50 flex-shrink-0">
+        <h3 class="font-semibold text-lg" id="ruleModalTitle">Add Mock Rule</h3>
+        <button onclick="hideRuleModal()" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
       </div>
-      <form id="ruleForm" onsubmit="saveRule(event)" class="p-4 space-y-4">
-        <input type="hidden" id="ruleId">
 
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-          <input type="text" id="ruleDescription" class="w-full px-3 py-2 border rounded" placeholder="e.g., Mock user login response">
-        </div>
+      <!-- Scrollable Content -->
+      <form id="ruleForm" onsubmit="saveRule(event)" class="flex-1 overflow-y-auto">
+        <div class="p-6 space-y-6">
+          <input type="hidden" id="ruleId">
 
-        <div class="grid grid-cols-2 gap-4">
+          <!-- Description -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">URL Pattern</label>
-            <input type="text" id="ruleUrlPattern" class="w-full px-3 py-2 border rounded" placeholder="*/api/users/*" required>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <input type="text" id="ruleDescription" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., Mock user login error response">
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Pattern Type</label>
-            <select id="rulePatternType" class="w-full px-3 py-2 border rounded">
-              <option value="wildcard">Wildcard (*)</option>
-              <option value="exact">Exact Match</option>
-              <option value="regex">Regex</option>
-            </select>
+
+          <!-- Request Matching Section -->
+          <div class="bg-gray-50 rounded-lg p-4 space-y-4">
+            <h4 class="font-medium text-gray-800 flex items-center gap-2">
+              <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              Request Matching
+            </h4>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">URL Pattern</label>
+              <input type="text" id="ruleUrlPattern" class="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="*/api/users/* or https://example.com/api/login" required>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Pattern Type</label>
+                <select id="rulePatternType" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value="wildcard">Wildcard (*)</option>
+                  <option value="exact">Exact Match</option>
+                  <option value="regex">Regex</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">HTTP Method</label>
+                <select id="ruleMethod" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value="ANY">ANY</option>
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                  <option value="DELETE">DELETE</option>
+                  <option value="PATCH">PATCH</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Delay (ms)</label>
+                <input type="number" id="ruleDelay" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" value="0" min="0" max="30000" placeholder="0">
+              </div>
+            </div>
+          </div>
+
+          <!-- Response Section -->
+          <div class="bg-blue-50 rounded-lg p-4 space-y-4">
+            <h4 class="font-medium text-gray-800 flex items-center gap-2">
+              <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Mock Response
+            </h4>
+
+            <div class="grid grid-cols-4 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Status Code</label>
+                <input type="number" id="ruleStatusCode" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" value="200" min="100" max="599">
+              </div>
+              <div class="col-span-3">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Quick Status</label>
+                <div class="flex gap-2">
+                  <button type="button" onclick="document.getElementById('ruleStatusCode').value=200" class="px-3 py-2 bg-green-100 text-green-700 text-sm rounded-lg hover:bg-green-200">200 OK</button>
+                  <button type="button" onclick="document.getElementById('ruleStatusCode').value=201" class="px-3 py-2 bg-green-100 text-green-700 text-sm rounded-lg hover:bg-green-200">201</button>
+                  <button type="button" onclick="document.getElementById('ruleStatusCode').value=400" class="px-3 py-2 bg-yellow-100 text-yellow-700 text-sm rounded-lg hover:bg-yellow-200">400</button>
+                  <button type="button" onclick="document.getElementById('ruleStatusCode').value=401" class="px-3 py-2 bg-yellow-100 text-yellow-700 text-sm rounded-lg hover:bg-yellow-200">401</button>
+                  <button type="button" onclick="document.getElementById('ruleStatusCode').value=404" class="px-3 py-2 bg-orange-100 text-orange-700 text-sm rounded-lg hover:bg-orange-200">404</button>
+                  <button type="button" onclick="document.getElementById('ruleStatusCode').value=500" class="px-3 py-2 bg-red-100 text-red-700 text-sm rounded-lg hover:bg-red-200">500</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Headers -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="block text-sm font-medium text-gray-700">Response Headers (JSON)</label>
+                <button type="button" onclick="formatJson('ruleHeaders')" class="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">Format JSON</button>
+              </div>
+              <textarea id="ruleHeaders" class="w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="3" spellcheck="false">{"Content-Type": "application/json"}</textarea>
+            </div>
+
+            <!-- Body -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <label class="block text-sm font-medium text-gray-700">Response Body</label>
+                <div class="flex gap-2">
+                  <button type="button" onclick="formatJson('ruleBody')" class="text-xs px-2 py-1 bg-blue-100 text-blue-600 rounded hover:bg-blue-200 font-medium">Format JSON</button>
+                  <button type="button" onclick="minifyJson('ruleBody')" class="text-xs px-2 py-1 bg-gray-200 text-gray-600 rounded hover:bg-gray-300">Minify</button>
+                </div>
+              </div>
+              <textarea id="ruleBody" class="w-full px-3 py-3 border border-gray-300 rounded-lg font-mono text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent leading-relaxed" rows="12" placeholder='{"message": "Mocked response", "data": {...}}' spellcheck="false"></textarea>
+              <p class="text-xs text-gray-400 mt-1">Tip: Click "Format JSON" to prettify the response body for easier editing</p>
+            </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">HTTP Method</label>
-            <select id="ruleMethod" class="w-full px-3 py-2 border rounded">
-              <option value="ANY">ANY</option>
-              <option value="GET">GET</option>
-              <option value="POST">POST</option>
-              <option value="PUT">PUT</option>
-              <option value="DELETE">DELETE</option>
-              <option value="PATCH">PATCH</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Status Code</label>
-            <input type="number" id="ruleStatusCode" class="w-full px-3 py-2 border rounded" value="200" min="100" max="599">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Response Headers (JSON)</label>
-          <textarea id="ruleHeaders" class="w-full px-3 py-2 border rounded font-mono text-sm" rows="2">{"Content-Type": "application/json"}</textarea>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Response Body</label>
-          <textarea id="ruleBody" class="w-full px-3 py-2 border rounded font-mono text-sm" rows="6" placeholder='{"message": "Mocked response"}'></textarea>
-        </div>
-
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Delay (ms)</label>
-          <input type="number" id="ruleDelay" class="w-full px-3 py-2 border rounded" value="0" min="0" max="30000">
-        </div>
-
-        <div class="flex justify-end gap-2 pt-4 border-t">
-          <button type="button" onclick="hideRuleModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded">Cancel</button>
-          <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Save Rule</button>
+        <!-- Footer -->
+        <div class="flex justify-end gap-3 p-4 border-t bg-gray-50 flex-shrink-0">
+          <button type="button" onclick="hideRuleModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition">Cancel</button>
+          <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-medium">Save Rule</button>
         </div>
       </form>
     </div>
@@ -1160,6 +1255,7 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
     let trafficData = [];
     let trafficPaused = false;
     let selectedFilters = []; // Array of selected host filters
+    let searchQuery = ''; // Search keyword
     let rulesData = [];
     let selectedTraffic = null;
     let ws = null;
@@ -1470,13 +1566,13 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       const text = document.getElementById('trafficPauseText');
 
       if (trafficPaused) {
-        btn.classList.remove('bg-green-100', 'text-green-700', 'hover:bg-green-200');
-        btn.classList.add('bg-yellow-100', 'text-yellow-700', 'hover:bg-yellow-200');
+        btn.classList.remove('bg-green-500', 'hover:bg-green-600');
+        btn.classList.add('bg-amber-500', 'hover:bg-amber-600');
         icon.textContent = '▶';
         text.textContent = 'Resume';
       } else {
-        btn.classList.remove('bg-yellow-100', 'text-yellow-700', 'hover:bg-yellow-200');
-        btn.classList.add('bg-green-100', 'text-green-700', 'hover:bg-green-200');
+        btn.classList.remove('bg-amber-500', 'hover:bg-amber-600');
+        btn.classList.add('bg-green-500', 'hover:bg-green-600');
         icon.textContent = '⏸';
         text.textContent = 'Pause';
         renderTraffic(); // Refresh to show any items added while paused
@@ -1490,9 +1586,25 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       const filtered = trafficData
         .map((t, originalIndex) => ({ ...t, _originalIndex: originalIndex }))
         .filter(t => {
-          if (selectedFilters.length === 0) return true;
           const urlLower = t.url.toLowerCase();
-          return selectedFilters.some(f => urlLower.includes(f.toLowerCase()));
+
+          // Apply host filters
+          if (selectedFilters.length > 0) {
+            const matchesFilter = selectedFilters.some(f => urlLower.includes(f.toLowerCase()));
+            if (!matchesFilter) return false;
+          }
+
+          // Apply search query
+          if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            // Search in URL, method, and response status
+            const matchesSearch = urlLower.includes(query) ||
+              t.method.toLowerCase().includes(query) ||
+              (t.response?.status?.toString() || '').includes(query);
+            if (!matchesSearch) return false;
+          }
+
+          return true;
         });
 
       document.getElementById('trafficCount').textContent = `${filtered.length} requests`;
@@ -1501,7 +1613,10 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       updateFilterTags();
 
       if (filtered.length === 0) {
-        container.innerHTML = '<div class="p-8 text-center text-gray-400">No traffic captured yet.</div>';
+        const message = (searchQuery || selectedFilters.length > 0)
+          ? 'No requests match your filters.'
+          : 'No traffic captured yet.';
+        container.innerHTML = `<div class="p-8 text-center text-gray-400">${message}</div>`;
         return;
       }
 
@@ -1529,20 +1644,70 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       renderTraffic();
     }
 
+    // Search functions
+    function onSearchInput() {
+      const input = document.getElementById('searchInput');
+      const clearBtn = document.getElementById('clearSearchBtn');
+
+      searchQuery = input.value.trim();
+
+      // Show/hide clear button
+      if (searchQuery) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+
+      renderTraffic();
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('searchInput');
+      const clearBtn = document.getElementById('clearSearchBtn');
+
+      input.value = '';
+      searchQuery = '';
+      clearBtn.classList.add('hidden');
+      renderTraffic();
+    }
+
     function updateFilterTags() {
       const tagsContainer = document.getElementById('filterTags');
+      const tagsRow = document.getElementById('filterTagsRow');
+      const filterCount = document.getElementById('filterCount');
 
       if (selectedFilters.length === 0) {
-        tagsContainer.innerHTML = '<span class="text-sm text-gray-400">All hosts</span>';
+        tagsRow.classList.add('hidden');
+        filterCount.classList.add('hidden');
         return;
       }
 
-      tagsContainer.innerHTML = selectedFilters.map(f => `
-        <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">
-          ${escapeHtml(f)}
-          <button onclick="removeFilter('${escapeHtml(f)}')" class="hover:text-blue-900 font-bold">×</button>
-        </span>
-      `).join('');
+      // Show the tags row and update count badge
+      tagsRow.classList.remove('hidden');
+      filterCount.classList.remove('hidden');
+      filterCount.textContent = selectedFilters.length;
+
+      // Get custom patterns to style them differently
+      const customPatterns = JSON.parse(localStorage.getItem('customFilterPatterns') || '[]');
+      const customPatternsLower = customPatterns.map(p => p.toLowerCase());
+
+      tagsContainer.innerHTML = selectedFilters.map(f => {
+        const isCustom = customPatternsLower.includes(f.toLowerCase());
+        if (isCustom) {
+          return `
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 text-sm rounded-full">
+              ${escapeHtml(f)}
+              <button onclick="removeFilter('${escapeHtml(f)}')" class="hover:text-purple-900 font-bold">×</button>
+            </span>
+          `;
+        }
+        return `
+          <span class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 text-sm rounded-full">
+            ${escapeHtml(f)}
+            <button onclick="removeFilter('${escapeHtml(f)}')" class="hover:text-blue-900 font-bold">×</button>
+          </span>
+        `;
+      }).join('');
     }
 
     function removeFilter(filterToRemove) {
@@ -1556,6 +1721,8 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       localStorage.removeItem('selectedFilters');
       renderTraffic();
       updateBaseUrlList();
+      // Close dropdown after clearing
+      document.getElementById('baseUrlDropdown').classList.add('hidden');
     }
 
     function toggleBaseUrlDropdown() {
@@ -1568,6 +1735,9 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
 
     function updateBaseUrlList() {
       const container = document.getElementById('baseUrlList');
+
+      // Get custom patterns
+      const customPatterns = JSON.parse(localStorage.getItem('customFilterPatterns') || '[]');
 
       // Extract unique hosts from traffic data
       const hosts = new Set();
@@ -1582,20 +1752,49 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       const savedHosts = JSON.parse(localStorage.getItem('savedHosts') || '[]');
       savedHosts.forEach(h => hosts.add(h));
 
-      if (hosts.size === 0) {
-        container.innerHTML = '<div class="p-3 text-sm text-gray-400">No hosts detected yet</div>';
-        return;
+      let html = '';
+
+      // Show custom patterns first (with purple styling and delete button)
+      if (customPatterns.length > 0) {
+        html += '<div class="px-3 py-1.5 bg-purple-50 border-b"><span class="text-xs font-medium text-purple-600">Custom Patterns</span></div>';
+        html += customPatterns.map(pattern => {
+          const isActive = selectedFilters.some(f => f.toLowerCase() === pattern.toLowerCase());
+          return `
+            <div class="px-3 py-2 text-sm flex items-center justify-between ${isActive ? 'bg-purple-50' : 'hover:bg-gray-50'}">
+              <div class="flex items-center gap-2 cursor-pointer flex-1" onclick="toggleHostFilter('${escapeHtml(pattern)}')">
+                <span class="${isActive ? 'text-purple-700 font-medium' : 'text-purple-600'}">${escapeHtml(pattern)}</span>
+                <span class="text-xs px-1.5 py-0.5 bg-purple-100 text-purple-500 rounded">pattern</span>
+              </div>
+              <div class="flex items-center gap-2">
+                ${isActive ? '<span class="text-purple-500">✓</span>' : '<span class="text-gray-300">○</span>'}
+                <button onclick="event.stopPropagation(); removeCustomPattern('${escapeHtml(pattern)}')" class="text-gray-400 hover:text-red-500 ml-1" title="Remove pattern">×</button>
+              </div>
+            </div>
+          `;
+        }).join('');
       }
 
-      container.innerHTML = Array.from(hosts).sort().map(host => {
-        const isActive = selectedFilters.some(f => f.toLowerCase() === host.toLowerCase());
-        return `
-          <div class="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 flex items-center justify-between ${isActive ? 'bg-blue-50' : ''}" onclick="toggleHostFilter('${escapeHtml(host)}')">
-            <span class="${isActive ? 'text-blue-700 font-medium' : ''}">${escapeHtml(host)}</span>
-            ${isActive ? '<span class="text-blue-500 text-lg">✓</span>' : '<span class="text-gray-300">○</span>'}
-          </div>
-        `;
-      }).join('');
+      // Show auto-detected hosts
+      if (hosts.size > 0) {
+        if (customPatterns.length > 0) {
+          html += '<div class="px-3 py-1.5 bg-gray-50 border-b border-t"><span class="text-xs font-medium text-gray-500">Detected Hosts</span></div>';
+        }
+        html += Array.from(hosts).sort().map(host => {
+          const isActive = selectedFilters.some(f => f.toLowerCase() === host.toLowerCase());
+          return `
+            <div class="px-3 py-2 text-sm cursor-pointer hover:bg-gray-100 flex items-center justify-between ${isActive ? 'bg-blue-50' : ''}" onclick="toggleHostFilter('${escapeHtml(host)}')">
+              <span class="${isActive ? 'text-blue-700 font-medium' : ''}">${escapeHtml(host)}</span>
+              ${isActive ? '<span class="text-blue-500">✓</span>' : '<span class="text-gray-300">○</span>'}
+            </div>
+          `;
+        }).join('');
+      }
+
+      if (!html) {
+        html = '<div class="p-3 text-sm text-gray-400">No hosts detected yet. Add a custom pattern above.</div>';
+      }
+
+      container.innerHTML = html;
     }
 
     function toggleHostFilter(host) {
@@ -1616,6 +1815,45 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
         }
       }
 
+      filterTraffic();
+      updateBaseUrlList();
+    }
+
+    function addCustomFilter() {
+      const input = document.getElementById('customFilterInput');
+      const pattern = input.value.trim();
+
+      if (!pattern) return;
+
+      // Check if already exists
+      if (selectedFilters.some(f => f.toLowerCase() === pattern.toLowerCase())) {
+        input.value = '';
+        return;
+      }
+
+      // Add to filters
+      selectedFilters.push(pattern);
+
+      // Save to custom patterns localStorage (separate from auto-detected hosts)
+      const customPatterns = JSON.parse(localStorage.getItem('customFilterPatterns') || '[]');
+      if (!customPatterns.some(p => p.toLowerCase() === pattern.toLowerCase())) {
+        customPatterns.push(pattern);
+        localStorage.setItem('customFilterPatterns', JSON.stringify(customPatterns));
+      }
+
+      input.value = '';
+      filterTraffic();
+      updateBaseUrlList();
+    }
+
+    function removeCustomPattern(pattern) {
+      // Remove from custom patterns localStorage
+      const customPatterns = JSON.parse(localStorage.getItem('customFilterPatterns') || '[]');
+      const filtered = customPatterns.filter(p => p.toLowerCase() !== pattern.toLowerCase());
+      localStorage.setItem('customFilterPatterns', JSON.stringify(filtered));
+
+      // Also remove from active filters
+      selectedFilters = selectedFilters.filter(f => f.toLowerCase() !== pattern.toLowerCase());
       filterTraffic();
       updateBaseUrlList();
     }
@@ -1776,22 +2014,29 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       }
 
       container.innerHTML = rulesData.map(r => `
-        <div class="p-4 flex items-center justify-between hover:bg-gray-50 ${!r.enabled ? 'opacity-50' : ''}">
-          <div class="flex-1">
-            <div class="font-medium">${r.description || r.urlPattern}</div>
-            <div class="text-sm text-gray-500">
-              <span class="font-mono">${r.method}</span>
-              <span class="font-mono">${r.urlPattern}</span>
-              → <span class="font-mono">${r.statusCode}</span>
-              ${r.delay ? `(${r.delay}ms delay)` : ''}
+        <div class="p-4 flex items-center gap-4 hover:bg-gray-50 border-l-4 ${r.enabled ? 'border-green-500 bg-green-50/30' : 'border-gray-300 bg-gray-50/50'}">
+          <!-- Toggle Switch -->
+          <button onclick="toggleRule('${r.id}')" class="flex-shrink-0 relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${r.enabled ? 'bg-green-500' : 'bg-gray-300'}" title="${r.enabled ? 'Click to disable' : 'Click to enable'}">
+            <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow ${r.enabled ? 'translate-x-6' : 'translate-x-1'}"></span>
+          </button>
+          <!-- Rule Info -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="font-medium ${r.enabled ? 'text-gray-900' : 'text-gray-500'}">${escapeHtml(r.description || 'Untitled Rule')}</span>
+              ${r.enabled ? '<span class="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded font-medium">ACTIVE</span>' : '<span class="px-1.5 py-0.5 bg-gray-200 text-gray-500 text-xs rounded">OFF</span>'}
+            </div>
+            <div class="text-sm text-gray-500 mt-1 flex items-center gap-2 flex-wrap">
+              <span class="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded font-mono">${r.method}</span>
+              <span class="font-mono text-xs truncate max-w-md">${escapeHtml(r.urlPattern)}</span>
+              <span class="text-gray-400">→</span>
+              <span class="px-1.5 py-0.5 ${r.statusCode < 300 ? 'bg-green-100 text-green-700' : r.statusCode < 400 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'} text-xs rounded font-mono">${r.statusCode}</span>
+              ${r.delay ? `<span class="text-xs text-gray-400">(${r.delay}ms delay)</span>` : ''}
             </div>
           </div>
-          <div class="flex items-center gap-2">
-            <button onclick="toggleRule('${r.id}')" class="px-3 py-1 ${r.enabled ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-600'} text-sm rounded">
-              ${r.enabled ? 'Enabled' : 'Disabled'}
-            </button>
-            <button onclick="editRule('${r.id}')" class="px-3 py-1 bg-blue-100 text-blue-600 text-sm rounded hover:bg-blue-200">Edit</button>
-            <button onclick="deleteRule('${r.id}')" class="px-3 py-1 bg-red-100 text-red-600 text-sm rounded hover:bg-red-200">Delete</button>
+          <!-- Actions -->
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button onclick="editRule('${r.id}')" class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">Edit</button>
+            <button onclick="deleteRule('${r.id}')" class="px-3 py-1.5 bg-red-100 text-red-600 text-sm rounded hover:bg-red-200">Delete</button>
           </div>
         </div>
       `).join('');
@@ -1806,8 +2051,24 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       document.getElementById('ruleMethod').value = rule?.method || 'ANY';
       document.getElementById('ruleStatusCode').value = rule?.statusCode || 200;
       document.getElementById('ruleHeaders').value = JSON.stringify(rule?.headers || { 'Content-Type': 'application/json' }, null, 2);
-      document.getElementById('ruleBody').value = typeof rule?.body === 'object' ? JSON.stringify(rule.body, null, 2) : (rule?.body || '');
       document.getElementById('ruleDelay').value = rule?.delay || 0;
+
+      // Format body as pretty JSON if possible
+      let bodyValue = '';
+      if (rule?.body) {
+        if (typeof rule.body === 'object') {
+          bodyValue = JSON.stringify(rule.body, null, 2);
+        } else {
+          // Try to parse and format if it's a JSON string
+          try {
+            const parsed = JSON.parse(rule.body);
+            bodyValue = JSON.stringify(parsed, null, 2);
+          } catch {
+            bodyValue = rule.body;
+          }
+        }
+      }
+      document.getElementById('ruleBody').value = bodyValue;
 
       document.getElementById('ruleModal').classList.remove('hidden');
       document.getElementById('ruleModal').classList.add('flex');
@@ -1816,6 +2077,26 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
     function hideRuleModal() {
       document.getElementById('ruleModal').classList.add('hidden');
       document.getElementById('ruleModal').classList.remove('flex');
+    }
+
+    function formatJson(textareaId) {
+      const textarea = document.getElementById(textareaId);
+      try {
+        const parsed = JSON.parse(textarea.value);
+        textarea.value = JSON.stringify(parsed, null, 2);
+      } catch (e) {
+        alert('Invalid JSON: ' + e.message);
+      }
+    }
+
+    function minifyJson(textareaId) {
+      const textarea = document.getElementById(textareaId);
+      try {
+        const parsed = JSON.parse(textarea.value);
+        textarea.value = JSON.stringify(parsed);
+      } catch (e) {
+        alert('Invalid JSON: ' + e.message);
+      }
     }
 
     async function saveRule(event) {
@@ -1885,13 +2166,38 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
     function createRuleFromTraffic() {
       if (!selectedTraffic) return;
       const t = selectedTraffic;
+
+      // Filter out problematic headers that shouldn't be in mock responses
+      const headersToRemove = [
+        'content-encoding',    // Body is already decompressed
+        'transfer-encoding',   // Not applicable for mock
+        'content-length',      // Will be recalculated
+        'connection',          // Not applicable
+        'keep-alive',          // Not applicable
+        'set-cookie'           // Cookies shouldn't be mocked usually
+      ];
+
+      let cleanHeaders = { 'Content-Type': 'application/json' };
+      if (t.response?.headers) {
+        cleanHeaders = {};
+        for (const [key, value] of Object.entries(t.response.headers)) {
+          if (!headersToRemove.includes(key.toLowerCase())) {
+            cleanHeaders[key] = value;
+          }
+        }
+        // Ensure Content-Type is present
+        if (!cleanHeaders['Content-Type'] && !cleanHeaders['content-type']) {
+          cleanHeaders['Content-Type'] = 'application/json';
+        }
+      }
+
       showRuleModal({
         description: `Mock for ${t.url}`,
         urlPattern: t.url,
         urlPatternType: 'exact',
         method: t.method,
         statusCode: t.response?.status || 200,
-        headers: t.response?.headers || { 'Content-Type': 'application/json' },
+        headers: cleanHeaders,
         body: t.response?.body || '{}'
       });
       hideTrafficModal();
