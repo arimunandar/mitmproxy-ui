@@ -190,6 +190,27 @@ app.get('/api/mac-proxy/status', async (req, res) => {
   }
 });
 
+app.get('/api/mac-ip', (req, res) => {
+  const { networkInterfaces } = require('os');
+  const nets = networkInterfaces();
+  let ip = null;
+
+  // Look for en0 (WiFi) or en1
+  for (const name of ['en0', 'en1']) {
+    if (nets[name]) {
+      for (const net of nets[name]) {
+        if (net.family === 'IPv4' && !net.internal) {
+          ip = net.address;
+          break;
+        }
+      }
+    }
+    if (ip) break;
+  }
+
+  res.json({ ip: ip || 'Not found' });
+});
+
 // ============================================
 // Mock Rules API
 // ============================================

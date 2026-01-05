@@ -8,6 +8,8 @@
   <style>
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+    .tutorial-subtab-content { display: block; }
+    .tutorial-subtab-content.hidden { display: none; }
     .status-dot { width: 10px; height: 10px; border-radius: 50%; }
     .status-running { background-color: #22c55e; animation: pulse 2s infinite; }
     .status-stopped { background-color: #ef4444; }
@@ -301,12 +303,35 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
 
     <!-- Tutorial Tab -->
     <div id="tab-tutorial" class="tab-content">
-      <div class="space-y-6">
-        <!-- Introduction -->
-        <div class="bg-white rounded-lg shadow p-6">
-          <h2 class="text-xl font-bold text-gray-800 mb-2">Mock Rules Tutorial</h2>
-          <p class="text-gray-600">Learn how to intercept API requests and return custom responses for testing your iOS app.</p>
+      <!-- Tutorial Sub-tabs -->
+      <div class="bg-white rounded-lg shadow mb-6">
+        <div class="flex border-b overflow-x-auto">
+          <button onclick="switchTutorialSubTab('mock-rules')" class="tutorial-sub-tab px-6 py-3 text-sm font-medium border-b-2 border-blue-500 text-blue-600 whitespace-nowrap" data-subtab="mock-rules">
+            Mock Rules
+          </button>
+          <button onclick="switchTutorialSubTab('real-iphone')" class="tutorial-sub-tab px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" data-subtab="real-iphone">
+            Real iPhone
+          </button>
+          <button onclick="switchTutorialSubTab('mac-browser')" class="tutorial-sub-tab px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" data-subtab="mac-browser">
+            Mac Browser
+          </button>
+          <button onclick="switchTutorialSubTab('ios-simulator')" class="tutorial-sub-tab px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" data-subtab="ios-simulator">
+            iOS Simulator
+          </button>
+          <button onclick="switchTutorialSubTab('faq')" class="tutorial-sub-tab px-6 py-3 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap" data-subtab="faq">
+            FAQ
+          </button>
         </div>
+      </div>
+
+      <!-- Sub-tab: Mock Rules -->
+      <div id="subtab-mock-rules" class="tutorial-subtab-content">
+        <div class="space-y-6">
+          <!-- Introduction -->
+          <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-2">Mock Rules Tutorial</h2>
+            <p class="text-gray-600">Learn how to intercept API requests and return custom responses for testing your iOS app.</p>
+          </div>
 
         <!-- What is Mocking -->
         <div class="bg-white rounded-lg shadow p-6">
@@ -651,16 +676,376 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
             </li>
           </ul>
         </div>
-
-        <!-- Quick Start Button -->
-        <div class="bg-white rounded-lg shadow p-6 text-center">
-          <h3 class="text-lg font-semibold text-gray-800 mb-2">Ready to Start?</h3>
-          <p class="text-gray-600 mb-4">Go to Live Traffic, click on any request, and create your first mock rule!</p>
-          <button onclick="switchTab('traffic')" class="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold">
-            Start Mocking →
-          </button>
         </div>
       </div>
+
+      <!-- Sub-tab: Real iPhone -->
+      <div id="subtab-real-iphone" class="tutorial-subtab-content hidden">
+        <div class="space-y-6">
+        <!-- Real iPhone Device Setup -->
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <span class="text-2xl">📱</span> Real iPhone Device Setup
+          </h3>
+          <p class="text-gray-600 mb-4">You can also use mitmproxy with your real iPhone. Both devices must be on the same WiFi network.</p>
+
+          <div class="space-y-4">
+            <!-- Step 1: Get Mac IP -->
+            <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
+              <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">1</div>
+              <div class="flex-1">
+                <h4 class="font-semibold text-gray-800">Get Your Mac's IP Address</h4>
+                <p class="text-sm text-gray-600 mt-1">Open Terminal and run:</p>
+                <code class="block bg-gray-800 text-green-400 p-2 rounded mt-2 text-sm">ipconfig getifaddr en0</code>
+                <p class="text-sm text-gray-500 mt-2">Or go to System Preferences → Network → WiFi → look for IP address</p>
+                <p class="text-sm text-gray-600 mt-2">Your Mac IP: <span id="macIpAddress" class="font-mono bg-blue-100 px-2 py-1 rounded">Loading...</span></p>
+              </div>
+            </div>
+
+            <!-- Step 2: Configure iPhone WiFi -->
+            <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
+              <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">2</div>
+              <div class="flex-1">
+                <h4 class="font-semibold text-gray-800">Configure iPhone WiFi Proxy</h4>
+                <p class="text-sm text-gray-600 mt-1">On your iPhone:</p>
+                <ol class="text-sm text-gray-600 mt-2 space-y-1 list-decimal list-inside">
+                  <li>Go to <strong>Settings → WiFi</strong></li>
+                  <li>Tap the <strong>ⓘ</strong> icon next to your connected WiFi</li>
+                  <li>Scroll down and tap <strong>Configure Proxy</strong></li>
+                  <li>Select <strong>Manual</strong></li>
+                  <li>Server: <strong><span class="mac-ip">Your Mac IP</span></strong></li>
+                  <li>Port: <strong>8888</strong></li>
+                  <li>Tap <strong>Save</strong></li>
+                </ol>
+              </div>
+            </div>
+
+            <!-- Step 3: Install Certificate -->
+            <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
+              <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">3</div>
+              <div class="flex-1">
+                <h4 class="font-semibold text-gray-800">Install mitmproxy Certificate</h4>
+                <p class="text-sm text-gray-600 mt-1">On your iPhone (with proxy enabled):</p>
+                <ol class="text-sm text-gray-600 mt-2 space-y-1 list-decimal list-inside">
+                  <li>Open <strong>Safari</strong> (must be Safari, not Chrome)</li>
+                  <li>Go to <strong class="text-blue-600">http://mitm.it</strong></li>
+                  <li>Tap <strong>Apple</strong> to download the certificate</li>
+                  <li>Tap <strong>Allow</strong> when prompted</li>
+                </ol>
+              </div>
+            </div>
+
+            <!-- Step 4: Install Profile -->
+            <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
+              <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">4</div>
+              <div class="flex-1">
+                <h4 class="font-semibold text-gray-800">Install the Profile</h4>
+                <p class="text-sm text-gray-600 mt-1">On your iPhone:</p>
+                <ol class="text-sm text-gray-600 mt-2 space-y-1 list-decimal list-inside">
+                  <li>Go to <strong>Settings → General → VPN & Device Management</strong></li>
+                  <li>You'll see <strong>"mitmproxy"</strong> under Downloaded Profile</li>
+                  <li>Tap it and tap <strong>Install</strong> (enter passcode)</li>
+                  <li>Tap <strong>Install</strong> again to confirm</li>
+                </ol>
+              </div>
+            </div>
+
+            <!-- Step 5: Trust Certificate -->
+            <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
+              <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">5</div>
+              <div class="flex-1">
+                <h4 class="font-semibold text-gray-800">Enable Full Trust</h4>
+                <p class="text-sm text-gray-600 mt-1">This is required for HTTPS interception:</p>
+                <ol class="text-sm text-gray-600 mt-2 space-y-1 list-decimal list-inside">
+                  <li>Go to <strong>Settings → General → About</strong></li>
+                  <li>Scroll down and tap <strong>Certificate Trust Settings</strong></li>
+                  <li>Enable the toggle for <strong>mitmproxy</strong></li>
+                  <li>Tap <strong>Continue</strong> to confirm</li>
+                </ol>
+              </div>
+            </div>
+
+            <!-- Step 6: Test -->
+            <div class="flex gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
+              <div class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">✓</div>
+              <div class="flex-1">
+                <h4 class="font-semibold text-green-800">Done! Test Your Setup</h4>
+                <p class="text-sm text-green-700 mt-1">Open any app on your iPhone and you should see traffic appearing in the <strong>Live Traffic</strong> tab.</p>
+                <p class="text-sm text-green-600 mt-2"><strong>To disable:</strong> Go back to WiFi settings and set proxy to "Off"</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <!-- Sub-tab: Mac Browser -->
+      <div id="subtab-mac-browser" class="tutorial-subtab-content hidden">
+        <div class="space-y-6">
+          <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+              <span class="text-2xl">💻</span> Mac Browser Setup
+            </h2>
+            <p class="text-gray-600">Use mitmproxy to intercept traffic from your Mac's browsers (Chrome, Safari, Firefox).</p>
+          </div>
+
+          <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Setup Steps</h3>
+            <div class="space-y-4">
+              <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">1</div>
+                <div class="flex-1">
+                  <h4 class="font-semibold text-gray-800">Start the Proxy</h4>
+                  <p class="text-sm text-gray-600 mt-1">Click <strong>"Start Proxy"</strong> button in the header.</p>
+                </div>
+              </div>
+
+              <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">2</div>
+                <div class="flex-1">
+                  <h4 class="font-semibold text-gray-800">Enable Mac Proxy</h4>
+                  <p class="text-sm text-gray-600 mt-1">Go to <strong>Setup Guide</strong> tab and click <strong>"Enable Mac Proxy"</strong>.</p>
+                  <p class="text-sm text-gray-500 mt-1">This automatically configures your Mac's network settings.</p>
+                </div>
+              </div>
+
+              <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">3</div>
+                <div class="flex-1">
+                  <h4 class="font-semibold text-gray-800">Install Certificate (First Time Only)</h4>
+                  <p class="text-sm text-gray-600 mt-1">For HTTPS sites, you need to install the mitmproxy certificate:</p>
+                  <ol class="text-sm text-gray-600 mt-2 space-y-1 list-decimal list-inside">
+                    <li>Open Finder → Go → Go to Folder → <code class="bg-gray-200 px-1 rounded">~/.mitmproxy/</code></li>
+                    <li>Double-click <strong>mitmproxy-ca-cert.pem</strong></li>
+                    <li>In Keychain Access, select <strong>"System"</strong> keychain</li>
+                    <li>Find "mitmproxy", double-click it</li>
+                    <li>Expand "Trust" → set to <strong>"Always Trust"</strong></li>
+                  </ol>
+                </div>
+              </div>
+
+              <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">4</div>
+                <div class="flex-1">
+                  <h4 class="font-semibold text-gray-800">Restart Browser</h4>
+                  <p class="text-sm text-gray-600 mt-1">Quit and reopen your browser for the certificate to take effect.</p>
+                </div>
+              </div>
+
+              <div class="flex gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                <div class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">✓</div>
+                <div class="flex-1">
+                  <h4 class="font-semibold text-green-800">Done!</h4>
+                  <p class="text-sm text-green-700 mt-1">Browse any website and see traffic in the <strong>Live Traffic</strong> tab.</p>
+                  <p class="text-sm text-green-600 mt-2"><strong>To disable:</strong> Click "Disable Mac Proxy" or "Stop Proxy".</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-tab: iOS Simulator -->
+      <div id="subtab-ios-simulator" class="tutorial-subtab-content hidden">
+        <div class="space-y-6">
+          <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-2 flex items-center gap-2">
+              <span class="text-2xl">📲</span> iOS Simulator Setup
+            </h2>
+            <p class="text-gray-600">The iOS Simulator uses your Mac's network settings, making setup simple.</p>
+          </div>
+
+          <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Setup Steps</h3>
+            <div class="space-y-4">
+              <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">1</div>
+                <div class="flex-1">
+                  <h4 class="font-semibold text-gray-800">Start the Proxy</h4>
+                  <p class="text-sm text-gray-600 mt-1">Click <strong>"Start Proxy"</strong> button. This also enables Mac Proxy automatically.</p>
+                </div>
+              </div>
+
+              <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">2</div>
+                <div class="flex-1">
+                  <h4 class="font-semibold text-gray-800">Boot a Simulator</h4>
+                  <p class="text-sm text-gray-600 mt-1">Go to <strong>Simulators</strong> tab and boot your desired simulator.</p>
+                </div>
+              </div>
+
+              <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">3</div>
+                <div class="flex-1">
+                  <h4 class="font-semibold text-gray-800">Install Certificate</h4>
+                  <p class="text-sm text-gray-600 mt-1">In the Simulator's Safari, go to <strong class="text-blue-600">http://mitm.it</strong></p>
+                  <ol class="text-sm text-gray-600 mt-2 space-y-1 list-decimal list-inside">
+                    <li>Tap <strong>Apple</strong> to download</li>
+                    <li>Go to Settings → General → VPN & Device Management</li>
+                    <li>Install the <strong>mitmproxy</strong> profile</li>
+                    <li>Go to Settings → General → About → Certificate Trust Settings</li>
+                    <li>Enable trust for <strong>mitmproxy</strong></li>
+                  </ol>
+                </div>
+              </div>
+
+              <div class="flex gap-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                <div class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">✓</div>
+                <div class="flex-1">
+                  <h4 class="font-semibold text-green-800">Done!</h4>
+                  <p class="text-sm text-green-700 mt-1">Run your app in the Simulator. Traffic will appear in <strong>Live Traffic</strong>.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p class="text-sm text-blue-800"><strong>Note:</strong> iOS Simulator shares network settings with your Mac. When Mac Proxy is enabled, the Simulator automatically uses it.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub-tab: FAQ -->
+      <div id="subtab-faq" class="tutorial-subtab-content hidden">
+        <div class="space-y-6">
+          <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-2">Frequently Asked Questions</h2>
+          </div>
+
+          <div class="space-y-4">
+            <!-- FAQ 1: Cellular Data -->
+            <div class="bg-white rounded-lg shadow p-6">
+              <h3 class="font-semibold text-gray-800 mb-3">Can I use the proxy with cellular data on my iPhone?</h3>
+              <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                <p class="text-red-800"><strong>No.</strong> The proxy only works when your iPhone is on the same WiFi network as your Mac.</p>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="bg-gray-100">
+                      <th class="text-left p-2">Connection</th>
+                      <th class="text-left p-2">Works?</th>
+                      <th class="text-left p-2">Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y">
+                    <tr>
+                      <td class="p-2">Same WiFi</td>
+                      <td class="p-2 text-green-600">✓ Yes</td>
+                      <td class="p-2 text-gray-600">iPhone can reach Mac's local IP</td>
+                    </tr>
+                    <tr>
+                      <td class="p-2">Cellular Data</td>
+                      <td class="p-2 text-red-600">✗ No</td>
+                      <td class="p-2 text-gray-600">Can't reach private IP from internet</td>
+                    </tr>
+                    <tr>
+                      <td class="p-2">Different WiFi</td>
+                      <td class="p-2 text-red-600">✗ No</td>
+                      <td class="p-2 text-gray-600">Different network, can't reach Mac</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- FAQ 2: No Internet -->
+            <div class="bg-white rounded-lg shadow p-6">
+              <h3 class="font-semibold text-gray-800 mb-3">Why do I get "No Internet" when proxy is enabled?</h3>
+              <p class="text-gray-600 mb-3">This happens when Mac Proxy is enabled but mitmproxy is not running.</p>
+              <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4">
+                <p class="text-yellow-800"><strong>Solution:</strong> Always start the proxy first, then enable Mac Proxy. If you stop the proxy, Mac Proxy is automatically disabled.</p>
+              </div>
+            </div>
+
+            <!-- FAQ 3: HTTPS Not Working -->
+            <div class="bg-white rounded-lg shadow p-6">
+              <h3 class="font-semibold text-gray-800 mb-3">Why can't I access HTTPS websites?</h3>
+              <p class="text-gray-600 mb-3">You need to install and trust the mitmproxy certificate.</p>
+              <ul class="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                <li>For Mac: Install certificate in Keychain and set to "Always Trust"</li>
+                <li>For iPhone: Install profile AND enable in Certificate Trust Settings</li>
+                <li>Restart your browser after installing the certificate</li>
+              </ul>
+            </div>
+
+            <!-- FAQ 4: Traffic Not Showing -->
+            <div class="bg-white rounded-lg shadow p-6">
+              <h3 class="font-semibold text-gray-800 mb-3">Why don't I see any traffic in Live Traffic?</h3>
+              <p class="text-gray-600 mb-3">Check the following:</p>
+              <ul class="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                <li>Is the proxy running? (Check header status)</li>
+                <li>Is Mac Proxy enabled? (Check Setup Guide tab)</li>
+                <li>For real iPhone: Is the WiFi proxy configured correctly?</li>
+                <li>Is the certificate installed and trusted?</li>
+              </ul>
+            </div>
+
+            <!-- FAQ 5: Mock Not Working -->
+            <div class="bg-white rounded-lg shadow p-6">
+              <h3 class="font-semibold text-gray-800 mb-3">Why isn't my mock rule working?</h3>
+              <p class="text-gray-600 mb-3">Check the following:</p>
+              <ul class="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                <li>Is the rule enabled? (Toggle should be on)</li>
+                <li>Does the URL pattern match? (Check Live Traffic for exact URL)</li>
+                <li>Is the HTTP method correct? (GET, POST, etc.)</li>
+                <li>Try using wildcard pattern: <code class="bg-gray-200 px-1 rounded">*/your/api/*</code></li>
+              </ul>
+            </div>
+
+            <!-- FAQ 6: Multiple Devices -->
+            <div class="bg-white rounded-lg shadow p-6">
+              <h3 class="font-semibold text-gray-800 mb-3">Can I use multiple devices at the same time?</h3>
+              <div class="bg-green-50 border-l-4 border-green-500 p-4">
+                <p class="text-green-800"><strong>Yes!</strong> Multiple devices can connect to the same proxy. Just configure each device to use your Mac's IP and port 8888.</p>
+              </div>
+            </div>
+
+            <!-- FAQ 7: Office WiFi -->
+            <div class="bg-white rounded-lg shadow p-6">
+              <h3 class="font-semibold text-gray-800 mb-3">Will my mock rules affect other users on the same WiFi (office/home)?</h3>
+              <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-4">
+                <p class="text-green-800"><strong>No!</strong> Only devices you explicitly configure to use your Mac as a proxy will be affected.</p>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="bg-gray-100">
+                      <th class="text-left p-2">Device</th>
+                      <th class="text-left p-2">Configured?</th>
+                      <th class="text-left p-2">Gets Mocked?</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y">
+                    <tr>
+                      <td class="p-2">Your iPhone (proxy set to your Mac)</td>
+                      <td class="p-2 text-green-600">✓ Yes</td>
+                      <td class="p-2 text-green-600">✓ Yes</td>
+                    </tr>
+                    <tr>
+                      <td class="p-2">Your Mac (Mac Proxy enabled)</td>
+                      <td class="p-2 text-green-600">✓ Yes</td>
+                      <td class="p-2 text-green-600">✓ Yes</td>
+                    </tr>
+                    <tr>
+                      <td class="p-2">Colleague's phone</td>
+                      <td class="p-2 text-gray-600">✗ No</td>
+                      <td class="p-2 text-gray-600">✗ No - Normal internet</td>
+                    </tr>
+                    <tr>
+                      <td class="p-2">Other office devices</td>
+                      <td class="p-2 text-gray-600">✗ No</td>
+                      <td class="p-2 text-gray-600">✗ No - Normal internet</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="text-sm text-gray-500 mt-3">Your coworkers won't even know you're running a proxy - their devices connect directly to the internet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
 
@@ -765,7 +1150,26 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       loadRules();
       loadRecordings();
       checkMacProxyStatus();
+      loadMacIP();
     });
+
+    // Load Mac IP address for real device tutorial
+    async function loadMacIP() {
+      try {
+        const res = await fetch('/api/mac-ip');
+        const data = await res.json();
+        const ipDisplay = document.getElementById('macIpAddress');
+        if (ipDisplay) {
+          ipDisplay.textContent = data.ip;
+        }
+        // Also update any elements with class mac-ip
+        document.querySelectorAll('.mac-ip').forEach(el => {
+          el.textContent = data.ip;
+        });
+      } catch (err) {
+        console.error('Failed to load Mac IP:', err);
+      }
+    }
 
     // WebSocket connection
     function connectWebSocket() {
@@ -822,9 +1226,19 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
     async function toggleProxy() {
       const endpoint = proxyRunning ? '/api/proxy/stop' : '/api/proxy/start';
       try {
+        // If stopping proxy, disable Mac proxy first to prevent "no internet" issue
+        if (proxyRunning) {
+          await fetch('/api/mac-proxy/disable', { method: 'POST' });
+        }
         const res = await fetch(endpoint, { method: 'POST' });
         const data = await res.json();
         if (data.error) throw new Error(data.error);
+
+        // If starting proxy, enable Mac proxy automatically
+        if (!proxyRunning) {
+          await fetch('/api/mac-proxy/enable', { method: 'POST' });
+        }
+        checkMacProxyStatus(); // Refresh status display
       } catch (err) {
         alert('Error: ' + err.message);
       }
@@ -899,6 +1313,22 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
 
       document.getElementById(`tab-${tabName}`).classList.add('active');
       const btn = document.querySelector(`[data-tab="${tabName}"]`);
+      btn.classList.remove('border-transparent', 'text-gray-500');
+      btn.classList.add('border-blue-500', 'text-blue-600');
+    }
+
+    function switchTutorialSubTab(subTabName) {
+      // Hide all sub-tab contents
+      document.querySelectorAll('.tutorial-subtab-content').forEach(el => el.classList.add('hidden'));
+      // Reset all sub-tab buttons
+      document.querySelectorAll('.tutorial-sub-tab').forEach(el => {
+        el.classList.remove('border-blue-500', 'text-blue-600');
+        el.classList.add('border-transparent', 'text-gray-500');
+      });
+
+      // Show selected sub-tab
+      document.getElementById(`subtab-${subTabName}`).classList.remove('hidden');
+      const btn = document.querySelector(`[data-subtab="${subTabName}"]`);
       btn.classList.remove('border-transparent', 'text-gray-500');
       btn.classList.add('border-blue-500', 'text-blue-600');
     }
