@@ -92,12 +92,6 @@ echo -e "${GREEN}========================================"
 echo "   Setup Complete!"
 echo "========================================${NC}"
 echo ""
-echo "To start the server, run:"
-echo ""
-echo -e "  ${YELLOW}npm start${NC}"
-echo ""
-echo "Then open http://localhost:3000 in your browser."
-echo ""
 echo "========================================"
 echo "   Quick Start Guide"
 echo "========================================"
@@ -115,3 +109,8 @@ echo "Your Mac's IP address:"
 IP_ADDRESS=$(ipconfig getifaddr en0 2>/dev/null || echo "Not found")
 echo -e "  ${GREEN}$IP_ADDRESS${NC}"
 echo ""
+echo -e "${YELLOW}Starting server...${NC}"
+echo ""
+
+# Start the server
+npm start
