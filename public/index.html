@@ -241,9 +241,26 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
               <span id="trafficPauseText">Pause</span>
             </button>
           </div>
-          <div class="flex gap-2">
-            <input type="text" id="trafficFilter" placeholder="Filter by URL..." class="px-3 py-1.5 border rounded text-sm w-64" oninput="filterTraffic()">
-            <button onclick="clearTraffic()" class="px-3 py-1.5 bg-red-100 text-red-600 text-sm rounded hover:bg-red-200">Clear</button>
+          <div class="flex gap-2 items-center">
+            <div class="relative">
+              <input type="text" id="trafficFilter" placeholder="Filter URLs (comma separated)..." class="px-3 py-1.5 border rounded text-sm w-80" oninput="filterTraffic()">
+              <button onclick="toggleBaseUrlDropdown()" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" title="Select from detected hosts">
+                ▼
+              </button>
+              <div id="baseUrlDropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                <div class="p-2 text-xs text-gray-500 border-b">Click to add/remove filter:</div>
+                <div id="baseUrlList" class="divide-y"></div>
+              </div>
+            </div>
+            <button onclick="clearTrafficFilter()" class="px-2 py-1.5 text-gray-400 hover:text-gray-600 text-sm" title="Clear filter">✕</button>
+            <button onclick="clearTraffic()" class="px-3 py-1.5 bg-red-100 text-red-600 text-sm rounded hover:bg-red-200">Clear All</button>
+          </div>
+        </div>
+        <!-- Active Filters Display -->
+        <div id="activeFilters" class="px-4 py-2 border-b bg-gray-50 hidden">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs text-gray-500">Filtering:</span>
+            <div id="filterTags" class="flex gap-1 flex-wrap"></div>
           </div>
         </div>
         <div id="trafficList" class="divide-y max-h-[600px] overflow-y-auto">
@@ -1156,6 +1173,16 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       loadRecordings();
       checkMacProxyStatus();
       loadMacIP();
+      loadSavedFilter();
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const dropdown = document.getElementById('baseUrlDropdown');
+      const toggle = e.target.closest('[onclick*="toggleBaseUrlDropdown"]');
+      if (!toggle && !e.target.closest('#baseUrlDropdown')) {
+        dropdown?.classList.add('hidden');
+      }
     });
 
     // Load Mac IP address for real device tutorial
@@ -1459,14 +1486,27 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
 
     function renderTraffic() {
       const container = document.getElementById('trafficList');
-      const filter = document.getElementById('trafficFilter').value.toLowerCase();
+      const filterValue = document.getElementById('trafficFilter').value.trim();
+
+      // Parse multiple filters (comma-separated)
+      const filters = filterValue
+        .split(',')
+        .map(f => f.trim().toLowerCase())
+        .filter(f => f.length > 0);
 
       // Store filtered items with their original indices
       const filtered = trafficData
         .map((t, originalIndex) => ({ ...t, _originalIndex: originalIndex }))
-        .filter(t => !filter || t.url.toLowerCase().includes(filter));
+        .filter(t => {
+          if (filters.length === 0) return true;
+          const urlLower = t.url.toLowerCase();
+          return filters.some(f => urlLower.includes(f));
+        });
 
       document.getElementById('trafficCount').textContent = `${filtered.length} requests`;
+
+      // Update filter tags display
+      updateFilterTags(filters);
 
       if (filtered.length === 0) {
         container.innerHTML = '<div class="p-8 text-center text-gray-400">No traffic captured yet.</div>';
@@ -1492,7 +1532,126 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
     }
 
     function filterTraffic() {
+      // Save filter to localStorage
+      const filterValue = document.getElementById('trafficFilter').value.trim();
+      if (filterValue) {
+        localStorage.setItem('trafficFilter', filterValue);
+      } else {
+        localStorage.removeItem('trafficFilter');
+      }
       renderTraffic();
+    }
+
+    function updateFilterTags(filters) {
+      const container = document.getElementById('activeFilters');
+      const tagsContainer = document.getElementById('filterTags');
+
+      if (filters.length === 0) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+      tagsContainer.innerHTML = filters.map(f => `
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+          ${escapeHtml(f)}
+          <button onclick="removeFilter('${escapeHtml(f)}')" class="hover:text-blue-900">×</button>
+        </span>
+      `).join('');
+    }
+
+    function removeFilter(filterToRemove) {
+      const input = document.getElementById('trafficFilter');
+      const filters = input.value.split(',').map(f => f.trim()).filter(f => f.toLowerCase() !== filterToRemove.toLowerCase());
+      input.value = filters.join(', ');
+      filterTraffic();
+    }
+
+    function clearTrafficFilter() {
+      document.getElementById('trafficFilter').value = '';
+      localStorage.removeItem('trafficFilter');
+      renderTraffic();
+    }
+
+    function toggleBaseUrlDropdown() {
+      const dropdown = document.getElementById('baseUrlDropdown');
+      dropdown.classList.toggle('hidden');
+      if (!dropdown.classList.contains('hidden')) {
+        updateBaseUrlList();
+      }
+    }
+
+    function updateBaseUrlList() {
+      const container = document.getElementById('baseUrlList');
+      const currentFilter = document.getElementById('trafficFilter').value.toLowerCase();
+
+      // Extract unique hosts from traffic data
+      const hosts = new Set();
+      trafficData.forEach(t => {
+        try {
+          const url = new URL(t.url);
+          hosts.add(url.host);
+        } catch (e) {}
+      });
+
+      // Also add saved hosts from localStorage
+      const savedHosts = JSON.parse(localStorage.getItem('savedHosts') || '[]');
+      savedHosts.forEach(h => hosts.add(h));
+
+      if (hosts.size === 0) {
+        container.innerHTML = '<div class="p-2 text-sm text-gray-400">No hosts detected yet</div>';
+        return;
+      }
+
+      container.innerHTML = Array.from(hosts).sort().map(host => {
+        const isActive = currentFilter.includes(host.toLowerCase());
+        return `
+          <div class="p-2 text-sm cursor-pointer hover:bg-gray-100 flex items-center justify-between ${isActive ? 'bg-blue-50' : ''}" onclick="toggleHostFilter('${host}')">
+            <span class="${isActive ? 'text-blue-700 font-medium' : ''}">${host}</span>
+            ${isActive ? '<span class="text-blue-500">✓</span>' : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleHostFilter(host) {
+      const input = document.getElementById('trafficFilter');
+      let filters = input.value.split(',').map(f => f.trim()).filter(f => f.length > 0);
+
+      const hostLower = host.toLowerCase();
+      const existingIndex = filters.findIndex(f => f.toLowerCase() === hostLower);
+
+      if (existingIndex >= 0) {
+        // Remove the host
+        filters.splice(existingIndex, 1);
+      } else {
+        // Add the host
+        filters.push(host);
+        // Save to localStorage
+        const savedHosts = JSON.parse(localStorage.getItem('savedHosts') || '[]');
+        if (!savedHosts.includes(host)) {
+          savedHosts.push(host);
+          localStorage.setItem('savedHosts', JSON.stringify(savedHosts));
+        }
+      }
+
+      input.value = filters.join(', ');
+      filterTraffic();
+      updateBaseUrlList();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Load saved filter on page load
+    function loadSavedFilter() {
+      const savedFilter = localStorage.getItem('trafficFilter');
+      if (savedFilter) {
+        document.getElementById('trafficFilter').value = savedFilter;
+      }
     }
 
     async function clearTraffic() {
