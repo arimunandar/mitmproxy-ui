@@ -90,6 +90,14 @@ curl -s -X POST "http://localhost:$PORT/api/proxy/start" > /dev/null
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}Proxy started successfully!${NC}"
+
+    # Enable Mac system proxy to capture traffic
+    echo -e "${YELLOW}Enabling Mac system proxy...${NC}"
+    networksetup -setwebproxy Wi-Fi 127.0.0.1 $PROXY_PORT
+    networksetup -setsecurewebproxy Wi-Fi 127.0.0.1 $PROXY_PORT
+    networksetup -setwebproxystate Wi-Fi on
+    networksetup -setsecurewebproxystate Wi-Fi on
+    echo -e "${GREEN}Mac proxy enabled (127.0.0.1:$PROXY_PORT)${NC}"
 else
     echo -e "${RED}Failed to start proxy${NC}"
 fi
