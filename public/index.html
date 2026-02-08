@@ -27,6 +27,39 @@
     .setup-step { transition: all 0.3s; }
     .setup-step.completed { opacity: 0.6; }
     .setup-step.completed .step-number { background-color: #22c55e; }
+    /* Context Menu */
+    .context-menu {
+      position: fixed;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      padding: 4px 0;
+      min-width: 180px;
+      z-index: 1000;
+    }
+    .context-menu-item {
+      padding: 8px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: #374151;
+    }
+    .context-menu-item:hover {
+      background-color: #f3f4f6;
+    }
+    .context-menu-item .icon {
+      width: 16px;
+      text-align: center;
+      color: #6b7280;
+    }
+    .context-menu-divider {
+      height: 1px;
+      background: #e5e7eb;
+      margin: 4px 0;
+    }
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -1303,11 +1336,39 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       <div class="p-4 border-b flex items-center justify-between sticky top-0 bg-white">
         <h3 class="font-semibold">Request Details</h3>
         <div class="flex gap-2">
+          <button onclick="copySelectedCurl()" class="px-3 py-1.5 bg-gray-700 text-white text-sm rounded hover:bg-gray-800 flex items-center gap-1">
+            <span>⌘</span> Copy as cURL
+          </button>
           <button onclick="createRuleFromTraffic()" class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">Create Mock Rule</button>
           <button onclick="hideTrafficModal()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
         </div>
       </div>
       <div id="trafficDetail" class="p-4"></div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div id="contextMenu" class="context-menu hidden">
+    <div class="context-menu-item" onclick="contextMenuAction('copyCurl')">
+      <span class="icon">⌘</span>
+      <span>Copy as cURL</span>
+    </div>
+    <div class="context-menu-item" onclick="contextMenuAction('copyUrl')">
+      <span class="icon">🔗</span>
+      <span>Copy URL</span>
+    </div>
+    <div class="context-menu-item" onclick="contextMenuAction('copyResponse')">
+      <span class="icon">📋</span>
+      <span>Copy Response Body</span>
+    </div>
+    <div class="context-menu-divider"></div>
+    <div class="context-menu-item" onclick="contextMenuAction('createRule')">
+      <span class="icon">✨</span>
+      <span>Create Mock Rule</span>
+    </div>
+    <div class="context-menu-item" onclick="contextMenuAction('viewDetails')">
+      <span class="icon">👁</span>
+      <span>View Details</span>
     </div>
   </div>
 
@@ -1334,12 +1395,17 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       loadSavedFilter();
     });
 
-    // Close dropdown when clicking outside
+    // Close dropdown and context menu when clicking outside
     document.addEventListener('click', (e) => {
+      // Close base URL dropdown
       const dropdown = document.getElementById('baseUrlDropdown');
       const toggle = e.target.closest('[onclick*="toggleBaseUrlDropdown"]');
       if (!toggle && !e.target.closest('#baseUrlDropdown')) {
         dropdown?.classList.add('hidden');
+      }
+      // Close context menu
+      if (!e.target.closest('#contextMenu')) {
+        hideContextMenu();
       }
     });
 
@@ -1724,7 +1790,9 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
         const methodClass = `method-${t.method.toLowerCase()}`;
 
         return `
-          <div class="traffic-item p-3 cursor-pointer flex items-center gap-4" onclick="showTrafficDetail(${t._originalIndex})">
+          <div class="traffic-item p-3 cursor-pointer flex items-center gap-4"
+               onclick="showTrafficDetail(${t._originalIndex})"
+               oncontextmenu="showContextMenu(event, ${t._originalIndex})">
             <span class="font-mono text-sm font-bold w-16 ${methodClass}">${t.method}</span>
             <span class="font-mono text-sm ${statusClass} w-12">${t.response?.status || '-'}</span>
             <span class="flex-1 text-sm truncate ${t.mocked ? 'text-purple-600' : ''}">${t.url}</span>
@@ -2025,7 +2093,7 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
             <pre class="mt-2 p-3 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto max-h-96 overflow-y-auto">${formatBody(t.response?.body)}</pre>
           </details>
 
-          <details>
+          <details open>
             <summary class="font-medium cursor-pointer">cURL Command</summary>
             <div class="mt-2 relative">
               <pre id="curlCommand" class="p-3 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto">${generateCurl(t)}</pre>
@@ -2056,28 +2124,46 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
     }
 
     function generateCurl(t) {
-      let curl = `curl -X ${t.method} '${t.url}'`;
+      // Use explicit ASCII single quote (char code 39) to avoid smart quote issues
+      const q = String.fromCharCode(39); // straight single quote '
+
+      // Start with curl command and --compressed flag to auto-decompress responses
+      let curl = `curl --compressed -X ${t.method} ${q}${t.url}${q}`;
 
       // Add headers
       if (t.requestHeaders) {
         for (const [key, value] of Object.entries(t.requestHeaders)) {
           // Skip some headers that curl handles automatically
           if (['host', 'content-length', 'connection'].includes(key.toLowerCase())) continue;
-          curl += ` \\\n  -H '${key}: ${value.replace(/'/g, "'\\''")}'`;
+          // Escape single quotes in header values
+          const escapedValue = value.replace(/'/g, q + "\\" + q + q);
+          curl += ` \\\n  -H ${q}${key}: ${escapedValue}${q}`;
         }
       }
 
       // Add body for POST/PUT/PATCH
       if (t.requestBody && ['POST', 'PUT', 'PATCH'].includes(t.method)) {
-        const escapedBody = t.requestBody.replace(/'/g, "'\\''");
-        curl += ` \\\n  -d '${escapedBody}'`;
+        const escapedBody = t.requestBody.replace(/'/g, q + "\\" + q + q);
+        curl += ` \\\n  -d ${q}${escapedBody}${q}`;
       }
+
+      // Final cleanup: replace any curly quotes that might have snuck in
+      curl = curl.replace(/[\u2018\u2019]/g, q); // Replace ' ' with '
+      curl = curl.replace(/[\u201C\u201D]/g, '"'); // Replace " " with "
 
       return curl;
     }
 
+    function sanitizeCurlQuotes(text) {
+      // Replace curly/smart quotes with straight quotes
+      return text
+        .replace(/[\u2018\u2019\u0060\u00B4]/g, "'")  // Various single quotes to straight '
+        .replace(/[\u201C\u201D]/g, '"');              // Curly double quotes to straight "
+    }
+
     function copyCurl(btn) {
-      const curlText = document.getElementById('curlCommand').textContent;
+      let curlText = document.getElementById('curlCommand').textContent;
+      curlText = sanitizeCurlQuotes(curlText);
       navigator.clipboard.writeText(curlText).then(() => {
         // Show feedback
         const originalText = btn.textContent;
@@ -2091,6 +2177,119 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
         alert('Failed to copy: ' + err.message);
       });
     }
+
+    function copySelectedCurl() {
+      if (!selectedTraffic) return;
+      let curl = generateCurl(selectedTraffic);
+      curl = sanitizeCurlQuotes(curl);
+      navigator.clipboard.writeText(curl).then(() => {
+        showToast('cURL copied to clipboard');
+      }).catch(err => {
+        alert('Failed to copy: ' + err.message);
+      });
+    }
+
+    // Context Menu
+    let contextMenuTrafficIndex = null;
+
+    function showContextMenu(event, index) {
+      event.preventDefault();
+      contextMenuTrafficIndex = index;
+
+      const menu = document.getElementById('contextMenu');
+      menu.classList.remove('hidden');
+
+      // Position the menu at cursor
+      let x = event.clientX;
+      let y = event.clientY;
+
+      // Adjust if menu would go off screen
+      const menuRect = menu.getBoundingClientRect();
+      if (x + menuRect.width > window.innerWidth) {
+        x = window.innerWidth - menuRect.width - 10;
+      }
+      if (y + menuRect.height > window.innerHeight) {
+        y = window.innerHeight - menuRect.height - 10;
+      }
+
+      menu.style.left = x + 'px';
+      menu.style.top = y + 'px';
+    }
+
+    function hideContextMenu() {
+      document.getElementById('contextMenu').classList.add('hidden');
+      contextMenuTrafficIndex = null;
+    }
+
+    function contextMenuAction(action) {
+      const t = trafficData[contextMenuTrafficIndex];
+      if (!t) {
+        hideContextMenu();
+        return;
+      }
+
+      switch (action) {
+        case 'copyCurl':
+          const curl = sanitizeCurlQuotes(generateCurl(t));
+          navigator.clipboard.writeText(curl).then(() => {
+            showToast('cURL copied to clipboard');
+          }).catch(err => {
+            alert('Failed to copy: ' + err.message);
+          });
+          break;
+
+        case 'copyUrl':
+          navigator.clipboard.writeText(t.url).then(() => {
+            showToast('URL copied to clipboard');
+          }).catch(err => {
+            alert('Failed to copy: ' + err.message);
+          });
+          break;
+
+        case 'copyResponse':
+          const body = t.response?.body || '';
+          if (!body) {
+            showToast('No response body to copy', 'warning');
+          } else {
+            navigator.clipboard.writeText(body).then(() => {
+              showToast('Response body copied to clipboard');
+            }).catch(err => {
+              alert('Failed to copy: ' + err.message);
+            });
+          }
+          break;
+
+        case 'createRule':
+          selectedTraffic = t;
+          createRuleFromTraffic();
+          break;
+
+        case 'viewDetails':
+          showTrafficDetail(contextMenuTrafficIndex);
+          break;
+      }
+
+      hideContextMenu();
+    }
+
+    function showToast(message, type = 'success') {
+      // Create toast element
+      const toast = document.createElement('div');
+      toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white text-sm z-50 transition-opacity duration-300 ${
+        type === 'success' ? 'bg-green-500' : type === 'warning' ? 'bg-amber-500' : 'bg-red-500'
+      }`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      // Fade out and remove
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    }
+
+    // Close context menu on scroll
+    document.addEventListener('scroll', hideContextMenu, true);
 
     // Rules
     async function loadRules() {
