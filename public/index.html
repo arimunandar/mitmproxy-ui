@@ -19,6 +19,9 @@
     .method-post { color: #3b82f6; }
     .method-put { color: #f59e0b; }
     .method-delete { color: #ef4444; }
+    .method-ws { color: #8b5cf6; }
+    .method-ws-in { color: #06b6d4; }
+    .method-ws-out { color: #d946ef; }
     .status-2xx { color: #22c55e; }
     .status-3xx { color: #3b82f6; }
     .status-4xx { color: #f59e0b; }
@@ -92,6 +95,12 @@
       </button>
       <button onclick="switchTab('traffic')" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="traffic">
         Live Traffic
+      </button>
+      <button onclick="switchTab('websocket')" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="websocket">
+        <span class="flex items-center gap-1">
+          <span class="w-2 h-2 bg-violet-500 rounded-full"></span>
+          WebSocket
+        </span>
       </button>
       <button onclick="switchTab('rules')" class="tab-btn px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700" data-tab="rules">
         Mock Rules
@@ -343,6 +352,50 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
           <div class="p-8 text-center text-gray-400">
             No traffic captured yet. Make requests from iOS Simulator to see them here.
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WebSocket Tab -->
+    <div id="tab-websocket" class="tab-content">
+      <div class="bg-white rounded-lg shadow">
+        <!-- Header Row -->
+        <div class="p-4 border-b">
+          <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <h2 class="font-semibold text-lg whitespace-nowrap flex items-center gap-2">
+                <span class="w-3 h-3 bg-violet-500 rounded-full"></span>
+                WebSocket Traffic
+              </h2>
+              <span id="wsTrafficCount" class="px-2 py-0.5 bg-violet-100 text-violet-600 text-sm rounded-full whitespace-nowrap">0 messages</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <!-- Connection filter -->
+              <select id="wsConnectionFilter" onchange="renderWebSocketTraffic()" class="px-3 py-1.5 border rounded-lg text-sm">
+                <option value="all">All Connections</option>
+              </select>
+
+              <!-- Message type filter -->
+              <select id="wsTypeFilter" onchange="renderWebSocketTraffic()" class="px-3 py-1.5 border rounded-lg text-sm">
+                <option value="all">All Messages</option>
+                <option value="open">Connections Only</option>
+                <option value="message">Messages Only</option>
+                <option value="sent">Sent Only</option>
+                <option value="received">Received Only</option>
+              </select>
+
+              <button onclick="clearWebSocketTraffic()" class="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-sm rounded-lg hover:bg-red-100 transition border border-red-200">
+                <span>🗑</span>
+                <span>Clear</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- WebSocket List -->
+        <div id="wsTrafficList" class="divide-y max-h-[600px] overflow-y-auto">
+          <div class="p-8 text-center text-gray-400">No WebSocket traffic captured yet.</div>
         </div>
       </div>
     </div>
@@ -1714,12 +1767,325 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
     }
 
     // Traffic
+    let wsTrafficData = []; // Separate array for WebSocket traffic
+
     function addTrafficItem(item) {
-      trafficData.push(item);
-      if (trafficData.length > 500) trafficData.shift();
-      if (!trafficPaused) {
-        renderTraffic();
+      const isWebSocket = item.type === 'websocket' || (item.method && item.method.startsWith('WS'));
+
+      if (isWebSocket) {
+        // Add to WebSocket traffic
+        wsTrafficData.push(item);
+        if (wsTrafficData.length > 500) wsTrafficData.shift();
+        renderWebSocketTraffic();
+        updateWsConnectionFilter();
+      } else {
+        // Add to regular traffic
+        trafficData.push(item);
+        if (trafficData.length > 500) trafficData.shift();
+        if (!trafficPaused) {
+          renderTraffic();
+        }
       }
+    }
+
+    function renderWebSocketTraffic() {
+      const container = document.getElementById('wsTrafficList');
+      const connectionFilter = document.getElementById('wsConnectionFilter')?.value || 'all';
+      const typeFilter = document.getElementById('wsTypeFilter')?.value || 'all';
+
+      let filtered = wsTrafficData.filter(t => {
+        // Connection filter
+        if (connectionFilter !== 'all' && !t.url.includes(connectionFilter)) {
+          return false;
+        }
+
+        // Type filter
+        if (typeFilter === 'open' && t.event !== 'open') return false;
+        if (typeFilter === 'message' && t.event !== 'message') return false;
+        if (typeFilter === 'sent' && !t.method.includes('→')) return false;
+        if (typeFilter === 'received' && !t.method.includes('←')) return false;
+
+        return true;
+      });
+
+      document.getElementById('wsTrafficCount').textContent = `${filtered.length} messages`;
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center text-gray-400">No WebSocket traffic captured yet.</div>';
+        return;
+      }
+
+      container.innerHTML = filtered.slice().reverse().map((t, i) => {
+        const originalIndex = wsTrafficData.indexOf(t);
+
+        // Determine styling based on message type
+        let methodClass, bgClass, icon;
+        if (t.event === 'open') {
+          methodClass = 'text-green-600';
+          bgClass = 'bg-green-50';
+          icon = '🔗';
+        } else if (t.event === 'close') {
+          methodClass = 'text-red-600';
+          bgClass = 'bg-red-50';
+          icon = '✕';
+        } else if (t.method.includes('→')) {
+          methodClass = 'text-violet-600';
+          bgClass = 'hover:bg-violet-50';
+          icon = '↑';
+        } else {
+          methodClass = 'text-cyan-600';
+          bgClass = 'hover:bg-cyan-50';
+          icon = '↓';
+        }
+
+        // Get content preview
+        const content = t.requestBody || t.response?.body || '';
+        const contentType = t.requestHeaders?.['Content-Type'] || '';
+        const isBinary = contentType.includes('binary') || contentType.includes('protobuf');
+        const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
+
+        return `
+          <div class="p-3 cursor-pointer flex items-start gap-3 ${bgClass} border-b" onclick="showWsDetail(${originalIndex})">
+            <span class="text-lg">${icon}</span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-sm font-bold ${methodClass}">${t.method}</span>
+                <span class="text-xs text-gray-400">${new Date(t.timestamp * 1000).toLocaleTimeString()}</span>
+                ${isBinary ? '<span class="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded">Protobuf</span>' : ''}
+                <span class="text-xs text-gray-400">${t.response?.headers?.Size || ''}</span>
+              </div>
+              <div class="text-sm text-gray-600 truncate">${t.url}</div>
+              ${content ? `<div class="text-xs text-gray-500 font-mono mt-1 truncate">${escapeHtml(preview)}</div>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateWsConnectionFilter() {
+      const select = document.getElementById('wsConnectionFilter');
+      if (!select) return;
+
+      const hosts = [...new Set(wsTrafficData.map(t => t.host))];
+      const currentValue = select.value;
+
+      select.innerHTML = '<option value="all">All Connections</option>' +
+        hosts.map(h => `<option value="${h}">${h}</option>`).join('');
+
+      if (hosts.includes(currentValue)) {
+        select.value = currentValue;
+      }
+    }
+
+    function clearWebSocketTraffic() {
+      wsTrafficData = [];
+      renderWebSocketTraffic();
+    }
+
+    function showWsDetail(index) {
+      const t = wsTrafficData[index];
+      if (!t) return;
+
+      const content = t.requestBody || t.response?.body || '';
+      const contentType = t.requestHeaders?.['Content-Type'] || '';
+      const isBinary = contentType.includes('binary') || contentType.includes('protobuf');
+
+      // Try to parse and format as JSON if possible
+      let formattedContent = content;
+      let isJson = false;
+      if (!isBinary && content) {
+        try {
+          const parsed = JSON.parse(content);
+          formattedContent = JSON.stringify(parsed, null, 2);
+          isJson = true;
+        } catch (e) {
+          // Not JSON, keep as is
+        }
+      }
+
+      const detail = document.getElementById('trafficDetail');
+      detail.innerHTML = `
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div><span class="text-gray-500">Type:</span> <span class="font-mono font-bold text-violet-600">WebSocket ${t.event}</span></div>
+            <div><span class="text-gray-500">Direction:</span> <span class="font-mono">${t.method}</span></div>
+            <div><span class="text-gray-500">Time:</span> <span class="font-mono">${new Date(t.timestamp * 1000).toLocaleString()}</span></div>
+            <div><span class="text-gray-500">Size:</span> <span class="font-mono">${t.response?.size || 0} bytes</span></div>
+          </div>
+
+          <div>
+            <span class="text-gray-500">URL:</span>
+            <div class="font-mono text-sm break-all bg-gray-50 p-2 rounded mt-1">${t.url}</div>
+          </div>
+
+          ${t.event === 'open' ? `
+            <details open>
+              <summary class="font-medium cursor-pointer">Connection Headers (Auth Info)</summary>
+              <pre class="mt-2 p-3 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto">${JSON.stringify(t.requestHeaders || {}, null, 2)}</pre>
+            </details>
+
+            <details open>
+              <summary class="font-medium cursor-pointer">WebSocket Connection Code</summary>
+              <div class="mt-2 relative">
+                <pre id="wsConnectCode" class="p-3 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto">${generateWsConnectCode(t)}</pre>
+                <button onclick="copyWsCode()" class="absolute top-2 right-2 px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded">Copy</button>
+              </div>
+            </details>
+          ` : ''}
+
+          ${content ? `
+            <details open>
+              <summary class="font-medium cursor-pointer">
+                ${t.method.includes('→') ? 'Sent' : 'Received'} Data
+                ${isBinary ? '<span class="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-xs rounded">Base64 Encoded</span>' : ''}
+                ${isJson ? '<span class="ml-2 px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded">JSON</span>' : ''}
+              </summary>
+              <div class="mt-2 relative">
+                <pre class="p-3 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto max-h-96 overflow-y-auto">${escapeHtml(formattedContent)}</pre>
+                <button onclick="copyToClipboard(\`${escapeHtml(content).replace(/`/g, '\\`')}\`)" class="absolute top-2 right-2 px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded">Copy</button>
+              </div>
+            </details>
+          ` : ''}
+
+          ${isBinary ? `
+            <details open>
+              <summary class="font-medium cursor-pointer">Decoded Data</summary>
+              <div class="mt-2 space-y-2">
+                <div class="flex gap-2">
+                  <button onclick="decodeBase64Hex('${content}')" class="px-3 py-1.5 bg-blue-500 text-white text-sm rounded hover:bg-blue-600">View as Hex</button>
+                  <button onclick="decodeProtobuf('${content}')" class="px-3 py-1.5 bg-violet-500 text-white text-sm rounded hover:bg-violet-600">Decode Protobuf</button>
+                  <button onclick="tryDecodeAsText('${content}')" class="px-3 py-1.5 bg-gray-500 text-white text-sm rounded hover:bg-gray-600">Try as Text</button>
+                </div>
+                <div id="decodedOutput" class="hidden">
+                  <pre class="p-3 bg-gray-800 text-green-400 text-xs rounded overflow-x-auto max-h-96 overflow-y-auto"></pre>
+                </div>
+              </div>
+            </details>
+          ` : ''}
+        </div>
+      `;
+
+      document.getElementById('trafficModal').classList.remove('hidden');
+      document.getElementById('trafficModal').classList.add('flex');
+    }
+
+    function generateWsConnectCode(t) {
+      const headers = t.requestHeaders || {};
+      const q = String.fromCharCode(39);
+
+      // Generate JavaScript WebSocket connection code
+      let code = `// WebSocket Connection Code\n`;
+      code += `const ws = new WebSocket(${q}${t.url}${q});\n\n`;
+      code += `// Headers used in original connection:\n`;
+      for (const [key, value] of Object.entries(headers)) {
+        code += `// ${key}: ${value}\n`;
+      }
+
+      code += `\n// Note: Browser WebSocket API doesn't support custom headers.\n`;
+      code += `// For auth, use URL params or send after connection:\n`;
+
+      if (headers['authorization'] || headers['Authorization']) {
+        const authHeader = headers['authorization'] || headers['Authorization'];
+        code += `\nws.onopen = () => {\n`;
+        code += `  // Send auth message after connection\n`;
+        code += `  ws.send(JSON.stringify({ type: ${q}auth${q}, token: ${q}${authHeader}${q} }));\n`;
+        code += `};\n`;
+      }
+
+      return code;
+    }
+
+    function copyWsCode() {
+      const code = document.getElementById('wsConnectCode').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        showToast('WebSocket code copied!');
+      });
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Copied to clipboard!');
+      });
+    }
+
+    function decodeBase64Hex(base64) {
+      try {
+        const binary = atob(base64);
+        let hex = '';
+        let ascii = '';
+        let output = '';
+
+        for (let i = 0; i < binary.length; i++) {
+          const byte = binary.charCodeAt(i);
+          hex += byte.toString(16).padStart(2, '0') + ' ';
+          ascii += (byte >= 32 && byte <= 126) ? binary[i] : '.';
+
+          if ((i + 1) % 16 === 0) {
+            output += `${(i - 15).toString(16).padStart(8, '0')}  ${hex} |${ascii}|\n`;
+            hex = '';
+            ascii = '';
+          }
+        }
+
+        if (hex) {
+          const padding = '   '.repeat(16 - (binary.length % 16));
+          output += `${(binary.length - (binary.length % 16)).toString(16).padStart(8, '0')}  ${hex}${padding} |${ascii}|\n`;
+        }
+
+        output = `Total: ${binary.length} bytes\n\n${output}`;
+
+        showDecodedOutput(output);
+      } catch (e) {
+        showDecodedOutput('Error decoding base64: ' + e.message);
+      }
+    }
+
+    function tryDecodeAsText(base64) {
+      try {
+        const binary = atob(base64);
+        // Try UTF-8 decode
+        const decoder = new TextDecoder('utf-8', { fatal: false });
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        const text = decoder.decode(bytes);
+
+        // Try to parse as JSON
+        try {
+          const json = JSON.parse(text);
+          showDecodedOutput(JSON.stringify(json, null, 2));
+        } catch {
+          showDecodedOutput(text);
+        }
+      } catch (e) {
+        showDecodedOutput('Error decoding: ' + e.message);
+      }
+    }
+
+    async function decodeProtobuf(base64) {
+      try {
+        const res = await fetch('/api/decode-protobuf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: base64 })
+        });
+        const result = await res.json();
+
+        if (result.error) {
+          showDecodedOutput('Error: ' + result.error);
+        } else {
+          showDecodedOutput(result.decoded);
+        }
+      } catch (e) {
+        showDecodedOutput('Error: ' + e.message);
+      }
+    }
+
+    function showDecodedOutput(content) {
+      const container = document.getElementById('decodedOutput');
+      container.classList.remove('hidden');
+      container.querySelector('pre').textContent = content;
     }
 
     function toggleTrafficPause() {
@@ -1784,10 +2150,27 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
       }
 
       container.innerHTML = filtered.slice().reverse().map((t, i) => {
+        const isWebSocket = t.type === 'websocket' || t.method.startsWith('WS');
         const statusClass = t.response
           ? (t.response.status < 300 ? 'status-2xx' : t.response.status < 400 ? 'status-3xx' : t.response.status < 500 ? 'status-4xx' : 'status-5xx')
           : '';
-        const methodClass = `method-${t.method.toLowerCase()}`;
+
+        // Determine method class
+        let methodClass;
+        if (t.method.includes('→')) {
+          methodClass = 'method-ws-out';  // Outgoing WS message
+        } else if (t.method.includes('←')) {
+          methodClass = 'method-ws-in';   // Incoming WS message
+        } else if (isWebSocket) {
+          methodClass = 'method-ws';      // WS connection
+        } else {
+          methodClass = `method-${t.method.toLowerCase()}`;
+        }
+
+        // WebSocket badge
+        const wsBadge = isWebSocket
+          ? '<span class="px-2 py-0.5 bg-violet-100 text-violet-600 text-xs rounded">WS</span>'
+          : '';
 
         return `
           <div class="traffic-item p-3 cursor-pointer flex items-center gap-4"
@@ -1796,6 +2179,7 @@ networksetup -setsecurewebproxystate "Wi-Fi" off</pre>
             <span class="font-mono text-sm font-bold w-16 ${methodClass}">${t.method}</span>
             <span class="font-mono text-sm ${statusClass} w-12">${t.response?.status || '-'}</span>
             <span class="flex-1 text-sm truncate ${t.mocked ? 'text-purple-600' : ''}">${t.url}</span>
+            ${wsBadge}
             ${t.mocked ? '<span class="px-2 py-0.5 bg-purple-100 text-purple-600 text-xs rounded">Mocked</span>' : ''}
             <span class="text-xs text-gray-400">${t.duration ? t.duration + 'ms' : ''}</span>
           </div>

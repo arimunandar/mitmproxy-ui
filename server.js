@@ -309,6 +309,128 @@ app.delete('/api/traffic/history', (req, res) => {
 });
 
 // ============================================
+// Protobuf Decode API
+// ============================================
+
+app.post('/api/decode-protobuf', (req, res) => {
+  const { data } = req.body;
+
+  if (!data) {
+    return res.status(400).json({ error: 'No data provided' });
+  }
+
+  try {
+    // Decode base64 to binary
+    const binary = Buffer.from(data, 'base64');
+
+    // Try to decode using protoc --decode_raw
+    const { spawn } = require('child_process');
+    const protoc = spawn('protoc', ['--decode_raw']);
+
+    let output = '';
+    let error = '';
+
+    protoc.stdout.on('data', (chunk) => {
+      output += chunk.toString();
+    });
+
+    protoc.stderr.on('data', (chunk) => {
+      error += chunk.toString();
+    });
+
+    protoc.on('close', (code) => {
+      if (code === 0) {
+        res.json({ decoded: output });
+      } else {
+        // If protoc fails, try manual decode
+        res.json({ decoded: manualProtobufDecode(binary) });
+      }
+    });
+
+    protoc.on('error', (err) => {
+      // protoc not installed, use manual decode
+      res.json({ decoded: manualProtobufDecode(binary) });
+    });
+
+    protoc.stdin.write(binary);
+    protoc.stdin.end();
+
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Simple manual protobuf decoder for when protoc is not available
+function manualProtobufDecode(buffer) {
+  let result = '';
+  let offset = 0;
+
+  function readVarint() {
+    let value = 0;
+    let shift = 0;
+    while (offset < buffer.length) {
+      const byte = buffer[offset++];
+      value |= (byte & 0x7f) << shift;
+      if ((byte & 0x80) === 0) break;
+      shift += 7;
+    }
+    return value;
+  }
+
+  function readBytes(length) {
+    const bytes = buffer.slice(offset, offset + length);
+    offset += length;
+    return bytes;
+  }
+
+  try {
+    while (offset < buffer.length) {
+      const tag = readVarint();
+      const fieldNum = tag >> 3;
+      const wireType = tag & 0x7;
+
+      let value;
+      switch (wireType) {
+        case 0: // Varint
+          value = readVarint();
+          result += `${fieldNum}: ${value}\n`;
+          break;
+        case 1: // 64-bit
+          value = readBytes(8);
+          result += `${fieldNum}: 0x${value.toString('hex')}\n`;
+          break;
+        case 2: // Length-delimited
+          const length = readVarint();
+          const data = readBytes(length);
+          // Try to decode as string
+          try {
+            const str = data.toString('utf8');
+            if (/^[\x20-\x7E\s]*$/.test(str)) {
+              result += `${fieldNum}: "${str}"\n`;
+            } else {
+              result += `${fieldNum}: <${length} bytes: ${data.toString('hex').substring(0, 40)}...>\n`;
+            }
+          } catch {
+            result += `${fieldNum}: <${length} bytes>\n`;
+          }
+          break;
+        case 5: // 32-bit
+          value = readBytes(4);
+          result += `${fieldNum}: 0x${value.toString('hex')}\n`;
+          break;
+        default:
+          result += `${fieldNum}: <unknown wire type ${wireType}>\n`;
+          break;
+      }
+    }
+  } catch (e) {
+    result += `\n[Decode error at offset ${offset}: ${e.message}]`;
+  }
+
+  return result || 'Unable to decode protobuf data';
+}
+
+// ============================================
 // Recording API
 // ============================================
 

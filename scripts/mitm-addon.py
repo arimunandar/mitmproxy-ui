@@ -1,6 +1,7 @@
 """
 mitmproxy addon that captures traffic and sends it to the mitmproxy-ui server.
 This addon also applies mock rules from the server.
+Supports HTTP and WebSocket traffic capture.
 """
 
 import json
@@ -9,7 +10,7 @@ import fnmatch
 import re
 import urllib.request
 import urllib.error
-from mitmproxy import http, ctx
+from mitmproxy import http, ctx, websocket
 
 # Server configuration - will be passed via --set server_port=3000
 SERVER_PORT = 3000
@@ -206,5 +207,109 @@ class MitmProxyUIAddon:
                 return content.decode('latin-1')
             except:
                 return f"[Binary content: {len(content)} bytes]"
+
+    # WebSocket handlers
+    def websocket_start(self, flow: http.HTTPFlow) -> None:
+        """Handle WebSocket connection start."""
+        ws_data = {
+            'id': f"ws-{flow.id}",
+            'timestamp': time.time(),
+            'type': 'websocket',
+            'event': 'open',
+            'method': 'WS',
+            'url': flow.request.pretty_url.replace('http://', 'ws://').replace('https://', 'wss://'),
+            'host': flow.request.host,
+            'path': flow.request.path,
+            'requestHeaders': dict(flow.request.headers),
+            'requestBody': None,
+            'mocked': False,
+            'ruleId': None,
+            'response': {
+                'status': 101,
+                'reason': 'Switching Protocols',
+                'headers': dict(flow.response.headers) if flow.response else {},
+                'body': '[WebSocket Connected]',
+                'size': 0
+            }
+        }
+        send_to_server('/api/traffic', ws_data)
+        ctx.log.info(f"[WebSocket] Connected: {flow.request.pretty_url}")
+
+    def websocket_message(self, flow: http.HTTPFlow) -> None:
+        """Handle WebSocket message."""
+        import base64
+
+        message = flow.websocket.messages[-1]
+
+        # Determine direction
+        direction = "→" if message.from_client else "←"
+        msg_type = "sent" if message.from_client else "received"
+
+        # Decode message content
+        if message.is_text:
+            content = message.text
+            content_type = 'text'
+        else:
+            # For binary (Protobuf, etc.), encode as base64 for display/copying
+            content = base64.b64encode(message.content).decode('ascii')
+            content_type = 'binary/protobuf'
+
+        ws_data = {
+            'id': f"ws-msg-{flow.id}-{len(flow.websocket.messages)}",
+            'timestamp': time.time(),
+            'type': 'websocket',
+            'event': 'message',
+            'method': f"WS {direction}",
+            'url': flow.request.pretty_url.replace('http://', 'ws://').replace('https://', 'wss://'),
+            'host': flow.request.host,
+            'path': flow.request.path,
+            'requestHeaders': {
+                'Direction': msg_type,
+                'Content-Type': content_type,
+                'Size': f"{len(message.content)} bytes"
+            },
+            'requestBody': content if message.from_client else None,
+            'mocked': False,
+            'ruleId': None,
+            'response': {
+                'status': 0,
+                'reason': msg_type,
+                'headers': {
+                    'Direction': msg_type,
+                    'Content-Type': content_type,
+                    'Size': f"{len(message.content)} bytes"
+                },
+                'body': content if not message.from_client else None,
+                'size': len(message.content)
+            },
+            'duration': 0
+        }
+        send_to_server('/api/traffic', ws_data)
+
+    def websocket_end(self, flow: http.HTTPFlow) -> None:
+        """Handle WebSocket connection end."""
+        ws_data = {
+            'id': f"ws-close-{flow.id}",
+            'timestamp': time.time(),
+            'type': 'websocket',
+            'event': 'close',
+            'method': 'WS ✕',
+            'url': flow.request.pretty_url.replace('http://', 'ws://').replace('https://', 'wss://'),
+            'host': flow.request.host,
+            'path': flow.request.path,
+            'requestHeaders': {},
+            'requestBody': None,
+            'mocked': False,
+            'ruleId': None,
+            'response': {
+                'status': 0,
+                'reason': 'Connection Closed',
+                'headers': {},
+                'body': '[WebSocket Closed]',
+                'size': 0
+            }
+        }
+        send_to_server('/api/traffic', ws_data)
+        ctx.log.info(f"[WebSocket] Closed: {flow.request.pretty_url}")
 
 addons = [MitmProxyUIAddon()]
