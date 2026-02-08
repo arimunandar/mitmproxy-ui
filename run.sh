@@ -77,5 +77,41 @@ echo ""
 export PORT=$PORT
 export PROXY_PORT=$PROXY_PORT
 
-# Run server in foreground so Ctrl+C works
-node server.js
+# Start server in background first
+node server.js &
+SERVER_PID=$!
+
+# Wait for server to be ready
+sleep 2
+
+# Auto-start the proxy
+echo -e "${YELLOW}Starting proxy on port $PROXY_PORT...${NC}"
+curl -s -X POST "http://localhost:$PORT/api/proxy/start" > /dev/null
+
+if [ $? -eq 0 ]; then
+    echo -e "${GREEN}Proxy started successfully!${NC}"
+else
+    echo -e "${RED}Failed to start proxy${NC}"
+fi
+
+echo ""
+echo -e "${GREEN}Ready! Open ${BLUE}http://localhost:$PORT${GREEN} in your browser${NC}"
+echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
+echo ""
+
+# Cleanup function
+cleanup() {
+    echo ""
+    echo -e "${YELLOW}Shutting down...${NC}"
+    curl -s -X POST "http://localhost:$PORT/api/proxy/stop" > /dev/null 2>&1
+    kill $SERVER_PID 2>/dev/null
+    networksetup -setwebproxystate Wi-Fi off 2>/dev/null || true
+    networksetup -setsecurewebproxystate Wi-Fi off 2>/dev/null || true
+    echo -e "${GREEN}Goodbye!${NC}"
+    exit 0
+}
+
+trap cleanup SIGINT SIGTERM
+
+# Wait for server process
+wait $SERVER_PID
